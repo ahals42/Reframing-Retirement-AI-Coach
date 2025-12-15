@@ -13,11 +13,40 @@ from dotenv import load_dotenv
 from prompts.prompt import build_coach_prompt
 
 
+STAGE_CONFIDENCE_THRESHOLD = 0.7
+
+
+@dataclass
+class StageCues:
+    """Stores detected cues from user text to support stage inference."""
+
+    has_frequency: bool = False
+    has_timeframe: bool = False
+    has_routine_language: bool = False
+    has_planning_language: bool = False
+    has_not_started_language: bool = False
+
+    @property
+    def behavior_evidence(self) -> bool:
+        return self.has_frequency or self.has_timeframe or self.has_routine_language
+
+
+@dataclass
+class StageInference:
+    """Represents the inferred stage and associated metadata."""
+
+    stage: str | None
+    confidence: float
+    cues: StageCues
+
+
 @dataclass
 class ConversationState:
     """Tracks inferred user context for prompt conditioning."""
 
     mpac_stage: str = "unknown"
+    stage_confidence: float = 0.0
+    pending_stage_question: str | None = None
     barrier: str = "unknown"
     activities: str = "unknown"
     time_available: str = "unknown"
@@ -26,14 +55,151 @@ class ConversationState:
         return asdict(self)
 
 
-def infer_stage(text: str) -> str | None:
+FREQUENCY_PATTERNS = [
+    r"\b\d+\s*(?:x|times?)\s*(?:each|per|a|this)?\s*(?:day|week|month)\b",
+    r"\b\d+\s*(?:days?)\s*(?:each|per|a)\s+week\b",
+    r"\b(?:daily|every day|each day|every morning|every evening)\b",
+    r"\b(?:once|twice|thrice)\s*(?:a|per)?\s*(?:week|day)\b",
+]
+
+TIMEFRAME_PATTERNS = [
+    r"\bfor\s+\d+\s+(?:weeks?|months?|years?)\b",
+    r"\bfor\s+(?:weeks|months|years)\b",
+    r"\bsince\s+\w+\b",
+    r"\bover\s+the\s+last\s+\d+\s+(?:weeks?|months?|years?)\b",
+]
+
+ROUTINE_KEYWORDS = [
+    "part of my routine",
+    "part of my day",
+    "part of my morning",
+    "part of my evening",
+    "part of my life",
+    "it's a habit",
+    "its a habit",
+    "habit now",
+    "have a habit",
+    "on autopilot",
+    "automatic",
+    "just what i do",
+    "built into my day",
+    "keep it going",
+]
+
+PLANNING_KEYWORDS = [
+    "i'm going to",
+    "i am going to",
+    "going to start",
+    "plan to",
+    "planning to",
+    "need a plan",
+    "need to plan",
+    "after dinner",
+    "before breakfast",
+    "schedule",
+    "set a reminder",
+    "reminder",
+    "implementation",
+]
+
+NOT_STARTED_KEYWORDS = [
+    "haven't started",
+    "have not started",
+    "haven't really",
+    "not really",
+    "keep meaning to",
+    "haven't gotten around",
+    "never start",
+    "never really",
+    "i should",
+    "should probably",
+    "maybe i will",
+    "not sure i can",
+]
+
+FREQUENCY_QUESTION = "In the last 7 days, about how many days did you do any purposeful movement, even a short walk counts?"
+ROUTINE_QUESTION = "Do you already have something you do most weeks, or are you still figuring out what could work?"
+TIMEFRAME_QUESTION = "Has this been going on for a while (weeks/months), or is it something you're just starting to experiment with?"
+
+
+def _contains_patterns(text: str, patterns: List[str]) -> bool:
+    return any(re.search(pattern, text, flags=re.IGNORECASE) for pattern in patterns)
+
+
+def _contains_keywords(text: str, keywords: List[str]) -> bool:
     lowered = text.lower()
-    if any(keyword in lowered for keyword in ("automatic", "habit", "keep it going", "consistent", "part of who i")):
-        return "reflexive"
-    if any(keyword in lowered for keyword in ("plan", "schedule", "follow through", "stick", "barrier", "forget", "routine")):
-        return "regulatory"
-    if any(keyword in lowered for keyword in ("should", "not sure", "maybe", "start", "starting", "thinking about", "unsure")):
-        return "reflective"
+    return any(keyword in lowered for keyword in keywords)
+
+
+def infer_stage(text: str) -> StageInference:
+    """Infer the M-PAC stage plus supporting confidence and cues."""
+
+    lowered = text.lower()
+    cues = StageCues(
+        has_frequency=_contains_patterns(lowered, FREQUENCY_PATTERNS),
+        has_timeframe=_contains_patterns(lowered, TIMEFRAME_PATTERNS),
+        has_routine_language=_contains_keywords(lowered, ROUTINE_KEYWORDS),
+        has_planning_language=_contains_keywords(lowered, PLANNING_KEYWORDS),
+        has_not_started_language=_contains_keywords(lowered, NOT_STARTED_KEYWORDS),
+    )
+
+    stage: str | None = None
+    has_habit_pair = cues.has_routine_language and (cues.has_frequency or cues.has_timeframe)
+    has_regular_frequency_over_time = cues.has_frequency and cues.has_timeframe
+    if has_habit_pair or has_regular_frequency_over_time:
+        stage = "maintenance"
+    elif cues.has_frequency:
+        stage = "action"
+    elif cues.has_planning_language and not cues.behavior_evidence:
+        stage = "planning"
+    elif cues.has_not_started_language and not cues.behavior_evidence:
+        stage = "early"
+
+    confidence = 0.0
+    if stage == "maintenance":
+        confidence = 0.55
+        if cues.has_frequency:
+            confidence += 0.15
+        if cues.has_timeframe:
+            confidence += 0.15
+        if cues.has_routine_language:
+            confidence += 0.1
+    elif stage == "action":
+        confidence = 0.5
+        if cues.has_frequency:
+            confidence += 0.25
+        if cues.has_timeframe:
+            confidence += 0.1
+        if cues.has_routine_language:
+            confidence += 0.05
+    elif stage == "planning":
+        confidence = 0.45
+        if cues.has_planning_language:
+            confidence += 0.3
+        if not cues.behavior_evidence:
+            confidence += 0.15
+    elif stage == "early":
+        confidence = 0.45
+        if cues.has_not_started_language:
+            confidence += 0.3
+        if not cues.behavior_evidence:
+            confidence += 0.2
+
+    confidence = min(confidence, 0.95)
+    return StageInference(stage=stage, confidence=confidence, cues=cues)
+
+
+def pick_clarifying_question(cues: StageCues) -> str | None:
+    """Return the best clarifying question based on missing stage cues."""
+
+    if not cues.behavior_evidence:
+        return FREQUENCY_QUESTION
+    if cues.has_frequency and not cues.has_routine_language:
+        return ROUTINE_QUESTION
+    if cues.has_frequency and not cues.has_timeframe:
+        return TIMEFRAME_QUESTION
+    if cues.has_timeframe and not cues.has_frequency:
+        return FREQUENCY_QUESTION
     return None
 
 
@@ -101,13 +267,22 @@ class CoachAgent:
         self.history: List[Dict[str, str]] = []
 
     def _update_state(self, user_input: str) -> None:
-        stage = infer_stage(user_input)
+        stage_inference = infer_stage(user_input)
         barrier = infer_barrier(user_input)
         activities = infer_activities(user_input)
         time_available = infer_time_available(user_input)
 
-        if stage:
-            self.state.mpac_stage = stage
+        if stage_inference.stage and stage_inference.confidence >= STAGE_CONFIDENCE_THRESHOLD:
+            self.state.mpac_stage = stage_inference.stage
+            self.state.stage_confidence = stage_inference.confidence
+            self.state.pending_stage_question = None
+        else:
+            if self.state.mpac_stage == "unknown":
+                self.state.stage_confidence = stage_inference.confidence
+                self.state.pending_stage_question = pick_clarifying_question(stage_inference.cues)
+            else:
+                self.state.pending_stage_question = None
+
         if barrier:
             self.state.barrier = barrier
         if activities:
