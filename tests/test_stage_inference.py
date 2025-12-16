@@ -1,45 +1,57 @@
-"""Tests for the stage inference helpers."""
+"""Tests for the process-layer inference helpers."""
 
 import unittest
 
 from main import (
     FREQUENCY_QUESTION,
-    STAGE_CONFIDENCE_THRESHOLD,
-    infer_stage,
-    pick_clarifying_question,
+    LAYER_CONFIDENCE_THRESHOLD,
+    infer_process_layer,
+    pick_layer_question,
 )
 
 
-class StageInferenceTests(unittest.TestCase):
-    def test_early_stage_inferred_for_explicit_not_started(self) -> None:
-        result = infer_stage("I keep meaning to walk but honestly haven't started yet.")
-        self.assertEqual(result.stage, "early")
-        self.assertGreaterEqual(result.confidence, STAGE_CONFIDENCE_THRESHOLD)
+class ProcessLayerInferenceTests(unittest.TestCase):
+    def test_reflective_layer_detected_for_not_started_language(self) -> None:
+        result = infer_process_layer("I keep meaning to walk but honestly haven't started yet.")
+        self.assertEqual(result.layer, "initiating_reflective")
+        self.assertGreaterEqual(result.confidence, LAYER_CONFIDENCE_THRESHOLD)
 
-    def test_planning_stage_detected_for_specific_intent_without_action(self) -> None:
+    def test_reflective_layer_detected_for_intent_without_behavior(self) -> None:
         text = "I'm going to start walking after dinner this week and need a plan to stick to it."
-        result = infer_stage(text)
-        self.assertEqual(result.stage, "planning")
-        self.assertGreaterEqual(result.confidence, STAGE_CONFIDENCE_THRESHOLD)
+        result = infer_process_layer(text)
+        self.assertEqual(result.layer, "initiating_reflective")
+        self.assertGreaterEqual(result.confidence, LAYER_CONFIDENCE_THRESHOLD)
 
-    def test_action_stage_detected_with_recent_frequency(self) -> None:
+    def test_regulatory_layer_detected_with_recent_frequency(self) -> None:
         text = "I walked 3 times this week for about 20 minutes each."
-        result = infer_stage(text)
-        self.assertEqual(result.stage, "action")
-        self.assertGreaterEqual(result.confidence, STAGE_CONFIDENCE_THRESHOLD)
+        result = infer_process_layer(text)
+        self.assertEqual(result.layer, "regulatory")
+        self.assertGreaterEqual(result.confidence, LAYER_CONFIDENCE_THRESHOLD)
 
-    def test_maintenance_stage_detected_with_routine_and_timeframe(self) -> None:
+    def test_reflexive_layer_detected_with_routine_and_timeframe(self) -> None:
         text = "I've been walking 4 times a week for months and it's part of my morning routine now."
-        result = infer_stage(text)
-        self.assertEqual(result.stage, "maintenance")
-        self.assertGreaterEqual(result.confidence, STAGE_CONFIDENCE_THRESHOLD)
+        result = infer_process_layer(text)
+        self.assertEqual(result.layer, "reflexive")
+        self.assertGreaterEqual(result.confidence, LAYER_CONFIDENCE_THRESHOLD)
+
+    def test_reflexive_layer_detected_with_progressive_statement(self) -> None:
+        text = "I've been running for years but recently tweaked my knee."
+        result = infer_process_layer(text)
+        self.assertEqual(result.layer, "reflexive")
+        self.assertGreaterEqual(result.confidence, LAYER_CONFIDENCE_THRESHOLD)
+
+    def test_ongoing_reflective_detected_with_affective_language(self) -> None:
+        text = "I love how calm I feel after short walks and take them whenever I get the chance."
+        result = infer_process_layer(text)
+        self.assertEqual(result.layer, "ongoing_reflective")
+        self.assertGreaterEqual(result.confidence, LAYER_CONFIDENCE_THRESHOLD)
 
     def test_vague_statement_requests_clarifying_question(self) -> None:
         text = "I've just been super busy lately."
-        result = infer_stage(text)
-        self.assertIsNone(result.stage)
-        self.assertLess(result.confidence, STAGE_CONFIDENCE_THRESHOLD)
-        self.assertEqual(pick_clarifying_question(result.cues), FREQUENCY_QUESTION)
+        result = infer_process_layer(text)
+        self.assertIsNone(result.layer)
+        self.assertLess(result.confidence, LAYER_CONFIDENCE_THRESHOLD)
+        self.assertEqual(pick_layer_question(result.signals), FREQUENCY_QUESTION)
 
 
 if __name__ == "__main__":

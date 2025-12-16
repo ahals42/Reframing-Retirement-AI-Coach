@@ -13,40 +13,48 @@ from dotenv import load_dotenv
 from prompts.prompt import build_coach_prompt
 
 
-STAGE_CONFIDENCE_THRESHOLD = 0.7
+LAYER_CONFIDENCE_THRESHOLD = 0.7
 
 
 @dataclass
-class StageCues:
-    """Stores detected cues from user text to support stage inference."""
+class LayerSignals:
+    """Stores detected cues that hint at reflective/regulatory/reflexive focus."""
 
     has_frequency: bool = False
     has_timeframe: bool = False
     has_routine_language: bool = False
     has_planning_language: bool = False
     has_not_started_language: bool = False
+    has_affective_language: bool = False
+    has_opportunity_language: bool = False
+    has_progressive_statement: bool = False
 
     @property
     def behavior_evidence(self) -> bool:
-        return self.has_frequency or self.has_timeframe or self.has_routine_language
+        return (
+            self.has_frequency
+            or self.has_timeframe
+            or self.has_routine_language
+            or self.has_progressive_statement
+        )
 
 
 @dataclass
-class StageInference:
-    """Represents the inferred stage and associated metadata."""
+class LayerInference:
+    """Represents the inferred process layer and supporting metadata."""
 
-    stage: str | None
+    layer: str | None
     confidence: float
-    cues: StageCues
+    signals: LayerSignals
 
 
 @dataclass
 class ConversationState:
     """Tracks inferred user context for prompt conditioning."""
 
-    mpac_stage: str = "unknown"
-    stage_confidence: float = 0.0
-    pending_stage_question: str | None = None
+    process_layer: str = "unclassified"
+    layer_confidence: float = 0.0
+    pending_layer_question: str | None = None
     barrier: str = "unknown"
     activities: str = "unknown"
     time_available: str = "unknown"
@@ -100,6 +108,7 @@ PLANNING_KEYWORDS = [
     "set a reminder",
     "reminder",
     "implementation",
+    "i'm thinking about"
 ]
 
 NOT_STARTED_KEYWORDS = [
@@ -117,6 +126,47 @@ NOT_STARTED_KEYWORDS = [
     "not sure i can",
 ]
 
+AFFECTIVE_KEYWORDS = [
+    "enjoy",
+    "enjoyed",
+    "like",
+    "like it",
+    "love",
+    "love it",
+    "fun",
+    "feel good",
+    "feel better",
+    "feel calm",
+    "calm",
+    "energized",
+    "energising",
+    "energizing",
+    "refreshing",
+    "relaxing",
+    "rewarding",
+    "happy",
+    "happiness",
+    "stress relief",
+    "stress reduction",
+]
+
+OPPORTUNITY_KEYWORDS = [
+    "chance",
+    "opportunity",
+    "easy to get to",
+    "access",
+    "nearby",
+    "close by",
+    "paths",
+    "trail",
+    "safe place",
+    "good weather",
+    "daylight",
+    "warm",
+    "sunny",
+    "not cold"
+]
+
 FREQUENCY_QUESTION = "In the last 7 days, about how many days did you do any purposeful movement, even a short walk counts?"
 ROUTINE_QUESTION = "Do you already have something you do most weeks, or are you still figuring out what could work?"
 TIMEFRAME_QUESTION = "Has this been going on for a while (weeks/months), or is it something you're just starting to experiment with?"
@@ -131,74 +181,89 @@ def _contains_keywords(text: str, keywords: List[str]) -> bool:
     return any(keyword in lowered for keyword in keywords)
 
 
-def infer_stage(text: str) -> StageInference:
-    """Infer the M-PAC stage plus supporting confidence and cues."""
+def infer_process_layer(text: str) -> LayerInference:
+    """Infer which M-PAC layer (reflective, regulatory, reflexive) is most active."""
 
     lowered = text.lower()
-    cues = StageCues(
+    signals = LayerSignals(
         has_frequency=_contains_patterns(lowered, FREQUENCY_PATTERNS),
         has_timeframe=_contains_patterns(lowered, TIMEFRAME_PATTERNS),
         has_routine_language=_contains_keywords(lowered, ROUTINE_KEYWORDS),
         has_planning_language=_contains_keywords(lowered, PLANNING_KEYWORDS),
         has_not_started_language=_contains_keywords(lowered, NOT_STARTED_KEYWORDS),
+        has_affective_language=_contains_keywords(lowered, AFFECTIVE_KEYWORDS),
+        has_opportunity_language=_contains_keywords(lowered, OPPORTUNITY_KEYWORDS),
+        has_progressive_statement=bool(re.search(r"\bbeen\s+\w+ing\b", lowered)),
     )
 
-    stage: str | None = None
-    has_habit_pair = cues.has_routine_language and (cues.has_frequency or cues.has_timeframe)
-    has_regular_frequency_over_time = cues.has_frequency and cues.has_timeframe
+    layer: str | None = None
+    has_progressive_habit = signals.has_progressive_statement and signals.has_timeframe
+    has_habit_pair = (signals.has_routine_language or has_progressive_habit) and (
+        signals.has_frequency or signals.has_timeframe
+    )
+    has_regular_frequency_over_time = signals.has_frequency and signals.has_timeframe
+    expresses_feelings_or_opportunity = signals.has_affective_language or signals.has_opportunity_language
+    has_behavior_signals = signals.behavior_evidence
+
     if has_habit_pair or has_regular_frequency_over_time:
-        stage = "maintenance"
-    elif cues.has_frequency:
-        stage = "action"
-    elif cues.has_planning_language and not cues.behavior_evidence:
-        stage = "planning"
-    elif cues.has_not_started_language and not cues.behavior_evidence:
-        stage = "early"
+        layer = "reflexive"
+    elif expresses_feelings_or_opportunity:
+        layer = "ongoing_reflective"
+    elif signals.has_frequency or signals.has_timeframe:
+        layer = "regulatory"
+    elif signals.has_planning_language or signals.has_not_started_language:
+        layer = "initiating_reflective"
+    elif not has_behavior_signals:
+        layer = None
 
     confidence = 0.0
-    if stage == "maintenance":
+    if layer == "reflexive":
         confidence = 0.55
-        if cues.has_frequency:
+        if signals.has_frequency:
             confidence += 0.15
-        if cues.has_timeframe:
+        if signals.has_timeframe:
             confidence += 0.15
-        if cues.has_routine_language:
+        if signals.has_routine_language:
             confidence += 0.1
-    elif stage == "action":
+    elif layer == "regulatory":
         confidence = 0.5
-        if cues.has_frequency:
+        if signals.has_frequency:
             confidence += 0.25
-        if cues.has_timeframe:
+        if signals.has_timeframe:
             confidence += 0.1
-        if cues.has_routine_language:
+        if signals.has_routine_language:
             confidence += 0.05
-    elif stage == "planning":
+    elif layer == "ongoing_reflective":
         confidence = 0.45
-        if cues.has_planning_language:
-            confidence += 0.3
-        if not cues.behavior_evidence:
-            confidence += 0.15
-    elif stage == "early":
-        confidence = 0.45
-        if cues.has_not_started_language:
-            confidence += 0.3
-        if not cues.behavior_evidence:
+        if signals.has_affective_language:
+            confidence += 0.25
+        if signals.has_opportunity_language:
             confidence += 0.2
+        if signals.behavior_evidence:
+            confidence += 0.1
+    elif layer == "initiating_reflective":
+        confidence = 0.45
+        if signals.has_planning_language:
+            confidence += 0.25
+        if signals.has_not_started_language:
+            confidence += 0.25
+        if not signals.behavior_evidence:
+            confidence += 0.1
 
     confidence = min(confidence, 0.95)
-    return StageInference(stage=stage, confidence=confidence, cues=cues)
+    return LayerInference(layer=layer, confidence=confidence, signals=signals)
 
 
-def pick_clarifying_question(cues: StageCues) -> str | None:
-    """Return the best clarifying question based on missing stage cues."""
+def pick_layer_question(signals: LayerSignals) -> str | None:
+    """Return the best clarifying question based on missing supportive cues."""
 
-    if not cues.behavior_evidence:
+    if not signals.behavior_evidence:
         return FREQUENCY_QUESTION
-    if cues.has_frequency and not cues.has_routine_language:
+    if signals.has_frequency and not signals.has_routine_language:
         return ROUTINE_QUESTION
-    if cues.has_frequency and not cues.has_timeframe:
+    if signals.has_frequency and not signals.has_timeframe:
         return TIMEFRAME_QUESTION
-    if cues.has_timeframe and not cues.has_frequency:
+    if signals.has_timeframe and not signals.has_frequency:
         return FREQUENCY_QUESTION
     return None
 
@@ -267,21 +332,21 @@ class CoachAgent:
         self.history: List[Dict[str, str]] = []
 
     def _update_state(self, user_input: str) -> None:
-        stage_inference = infer_stage(user_input)
+        layer_inference = infer_process_layer(user_input)
         barrier = infer_barrier(user_input)
         activities = infer_activities(user_input)
         time_available = infer_time_available(user_input)
 
-        if stage_inference.stage and stage_inference.confidence >= STAGE_CONFIDENCE_THRESHOLD:
-            self.state.mpac_stage = stage_inference.stage
-            self.state.stage_confidence = stage_inference.confidence
-            self.state.pending_stage_question = None
+        if layer_inference.layer and layer_inference.confidence >= LAYER_CONFIDENCE_THRESHOLD:
+            self.state.process_layer = layer_inference.layer
+            self.state.layer_confidence = layer_inference.confidence
+            self.state.pending_layer_question = None
         else:
-            if self.state.mpac_stage == "unknown":
-                self.state.stage_confidence = stage_inference.confidence
-                self.state.pending_stage_question = pick_clarifying_question(stage_inference.cues)
+            if self.state.process_layer == "unclassified":
+                self.state.layer_confidence = layer_inference.confidence
+                self.state.pending_layer_question = pick_layer_question(layer_inference.signals)
             else:
-                self.state.pending_stage_question = None
+                self.state.pending_layer_question = None
 
         if barrier:
             self.state.barrier = barrier
@@ -315,15 +380,15 @@ class CoachAgent:
 
 def main() -> None:
     load_dotenv()
-    api_key = os.getenv("OPEN_API_KEY")
+    api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        raise ValueError("OPEN_API_KEY not found in environment variables")
+        raise ValueError("OPENAI_API_KEY not found in environment variables")
 
     client = OpenAI(api_key=api_key)
     model = os.getenv("OPENAI_MODEL", "gpt-4o")
     agent = CoachAgent(client=client, model=model)
 
-    print("Physical-activity coach is ready. Type 'exit' or 'quit' to stop.")
+    print("What would you like to talk through today around being active? (Type 'exit' or 'quit' to stop.)")
     while True:
         try:
             user_text = input("You: ").strip()
