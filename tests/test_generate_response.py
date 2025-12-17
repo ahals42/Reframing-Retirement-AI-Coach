@@ -49,4 +49,9 @@ class GenerateResponseTests(unittest.TestCase):
         self.assertEqual(len(stub_client.calls), 1)
         recorded = stub_client.calls[0]
         self.assertEqual(recorded["model"], "fake-model")
-        self.assertEqual(recorded["mess
+        self.assertEqual(recorded["messages"][-1]["content"], "Hello coach")
+        self.assertEqual(recorded["messages"][0]["role"], "system")
+
+
+if __name__ == "__main__":
+    unittest.main()

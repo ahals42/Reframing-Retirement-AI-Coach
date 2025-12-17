@@ -20,4 +20,9 @@ class PromptBuilderTests(unittest.TestCase):
         self.assertIn("Layer confidence: 0.82", prompt)
         self.assertIn("Layer clarifying question: In the last 7 days", prompt)
         self.assertIn("Main barrier: time pressure", prompt)
-        self.assertIn("Preferred ac
+        self.assertIn("Preferred activities: walking", prompt)
+        self.assertIn("Time available today: 15 minutes", prompt)
+
+
+if __name__ == "__main__":
+    unittest.main()

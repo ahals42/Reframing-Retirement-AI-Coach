@@ -22,4 +22,9 @@ class ContextExtractionTests(unittest.TestCase):
     def test_infer_time_available_minutes(self) -> None:
         self.assertEqual(infer_time_available("I can spare about 15 minutes."), "15 minutes")
 
-    def test_
+    def test_infer_time_available_half_hour(self) -> None:
+        self.assertEqual(infer_time_available("Maybe a half hour."), "30 minutes")
+
+
+if __name__ == "__main__":
+    unittest.main()
