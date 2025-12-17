@@ -1,10 +1,13 @@
-"""Tests for the process-layer inference helpers."""
+"""Tests for the process-layer inference helpers and follow-up questions."""
 
 import unittest
 
 from main import (
     FREQUENCY_QUESTION,
     LAYER_CONFIDENCE_THRESHOLD,
+    ROUTINE_QUESTION,
+    TIMEFRAME_QUESTION,
+    LayerSignals,
     infer_process_layer,
     pick_layer_question,
 )
@@ -52,6 +55,22 @@ class ProcessLayerInferenceTests(unittest.TestCase):
         self.assertIsNone(result.layer)
         self.assertLess(result.confidence, LAYER_CONFIDENCE_THRESHOLD)
         self.assertEqual(pick_layer_question(result.signals), FREQUENCY_QUESTION)
+
+    def test_frequency_question_when_no_behavior_signals(self) -> None:
+        signals = LayerSignals()
+        self.assertEqual(pick_layer_question(signals), FREQUENCY_QUESTION)
+
+    def test_routine_question_when_frequency_without_habit(self) -> None:
+        signals = LayerSignals(has_frequency=True)
+        self.assertEqual(pick_layer_question(signals), ROUTINE_QUESTION)
+
+    def test_timeframe_question_when_frequency_without_duration(self) -> None:
+        signals = LayerSignals(has_frequency=True, has_routine_language=True)
+        self.assertEqual(pick_layer_question(signals), TIMEFRAME_QUESTION)
+
+    def test_frequency_question_when_timeframe_without_frequency(self) -> None:
+        signals = LayerSignals(has_timeframe=True)
+        self.assertEqual(pick_layer_question(signals), FREQUENCY_QUESTION)
 
 
 if __name__ == "__main__":

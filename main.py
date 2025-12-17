@@ -92,6 +92,12 @@ ROUTINE_KEYWORDS = [
     "just what i do",
     "built into my day",
     "keep it going",
+    "most days",
+    "almost every day",
+    "part of my week",
+    "since i retired",
+    "what i usually do",
+    "second nature",
 ]
 
 PLANNING_KEYWORDS = [
@@ -108,7 +114,15 @@ PLANNING_KEYWORDS = [
     "set a reminder",
     "reminder",
     "implementation",
-    "i'm thinking about"
+    "i'm thinking about",
+    "trying to get back into",
+    "want to start again",
+    "thinking of starting",
+    "working up to",
+    "ease into",
+    "build up slowly",
+    "after breakfast",
+    "mid-morning",
 ]
 
 NOT_STARTED_KEYWORDS = [
@@ -124,6 +138,12 @@ NOT_STARTED_KEYWORDS = [
     "should probably",
     "maybe i will",
     "not sure i can",
+    "fell out of the habit",
+    "got out of the routine",
+    "haven't been consistent",
+    "on and off",
+    "hard to get going",
+    "not sure where to start",
 ]
 
 AFFECTIVE_KEYWORDS = [
@@ -148,6 +168,14 @@ AFFECTIVE_KEYWORDS = [
     "happiness",
     "stress relief",
     "stress reduction",
+    "less stiff",
+    "feel looser",
+    "helps my joints",
+    "helps my balance",
+    "clears my head",
+    "helps me sleep",
+    "feel independent",
+    "keeps me moving",
 ]
 
 OPPORTUNITY_KEYWORDS = [
@@ -164,7 +192,14 @@ OPPORTUNITY_KEYWORDS = [
     "daylight",
     "warm",
     "sunny",
-    "not cold"
+    "not cold",
+    "community centre",
+    "rec centre",
+    "indoor",
+    "snow",
+    "icy",
+    "winter",
+    "weather",
 ]
 
 FREQUENCY_QUESTION = "In the last 7 days, about how many days did you do any purposeful movement, even a short walk counts?"
@@ -271,11 +306,64 @@ def pick_layer_question(signals: LayerSignals) -> str | None:
 def infer_barrier(text: str) -> str | None:
     lowered = text.lower()
     barrier_map = {
-        "time pressure": ["busy", "no time", "schedule", "travel", "work"],
-        "motivation dip": ["motivation", "don't feel", "lazy", "energy", "tired", "drained"],
-        "weather": ["weather", "cold", "hot", "rain", "snow"],
-        "pain or discomfort": ["pain", "ache", "sore", "injury", "hurt"],
-        "confidence": ["nervous", "intimidated", "embarrassed"],
+        "time pressure": [
+            "busy",
+            "no time",
+            "schedule",
+            "travel",
+            "work",
+            "appointments",
+            "errands",
+            "looking after",
+            "caregiving",
+            "day gets away",
+        ],
+        "motivation dip": [
+            "motivation",
+            "don't feel",
+            "lazy",
+            "energy",
+            "tired",
+            "drained",
+            "low energy",
+            "worn out",
+            "hard to get going",
+            "no drive",
+            "can't get motivated",
+        ],
+        "weather": [
+            "weather",
+            "cold",
+            "hot",
+            "rain",
+            "snow",
+            "winter",
+            "icy",
+            "slippery",
+            "too hot",
+            "too cold",
+        ],
+        "pain or discomfort": [
+            "pain",
+            "ache",
+            "sore",
+            "injury",
+            "hurt",
+            "stiff",
+            "stiffness",
+            "joint pain",
+            "back pain",
+            "knee pain",
+        ],
+        "confidence": [
+            "nervous",
+            "intimidated",
+            "embarrassed",
+            "worried",
+            "afraid",
+            "fear of falling",
+            "not confident",
+        ],
     }
     for label, keywords in barrier_map.items():
         if any(keyword in lowered for keyword in keywords):
@@ -286,12 +374,61 @@ def infer_barrier(text: str) -> str | None:
 def infer_activities(text: str) -> str | None:
     lowered = text.lower()
     activity_map = {
-        "walking": ["walk", "walking", "hike"],
-        "light strength": ["strength", "weights", "dumbbell", "resistance", "band"],
-        "mobility": ["stretch", "mobility", "yoga"],
-        "cycling": ["bike", "cycling", "spin"],
-        "swimming": ["swim", "pool"],
-    }
+    "walking": [
+        "walk",
+        "walking",
+        "hike",
+        "go for a walk",
+        "walking outside",
+        "walking group",
+        "group walk",
+        "walking club",
+    ],
+    "light strength": [
+        "strength",
+        "weights",
+        "dumbbell",
+        "resistance",
+        "band",
+        "strength training",
+        "bodyweight",
+        "light weights",
+    ],
+    "mobility": [
+        "stretch",
+        "stretching",
+        "mobility",
+        "yoga",
+        "range of motion",
+        "flexibility",
+        "tai chi",
+        "taichi",
+    ],
+    "cycling": [
+        "bike",
+        "cycling",
+        "spin",
+        "stationary bike",
+        "exercise bike",
+    ],
+    "swimming": [
+        "swim",
+        "swimming",
+        "pool",
+        "water",
+        "aquafit",
+        "water aerobics",
+        "aqua fitness",
+    ],
+    "golf": [
+        "golf",
+        "golfing",
+        "driving range",
+    ],
+    "pickleball": [
+        "pickleball",
+    ],
+}
     found: List[str] = []
     for label, keywords in activity_map.items():
         if any(keyword in lowered for keyword in keywords):
@@ -345,8 +482,12 @@ class CoachAgent:
             if self.state.process_layer == "unclassified":
                 self.state.layer_confidence = layer_inference.confidence
                 self.state.pending_layer_question = pick_layer_question(layer_inference.signals)
-            else:
-                self.state.pending_layer_question = None
+
+        if layer_inference.signals.has_frequency and not layer_inference.signals.has_timeframe:
+            if self.state.pending_layer_question is None:
+                self.state.pending_layer_question = TIMEFRAME_QUESTION
+        elif layer_inference.signals.has_timeframe and self.state.pending_layer_question == TIMEFRAME_QUESTION:
+            self.state.pending_layer_question = None
 
         if barrier:
             self.state.barrier = barrier
