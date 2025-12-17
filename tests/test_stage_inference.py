@@ -31,6 +31,12 @@ class ProcessLayerInferenceTests(unittest.TestCase):
         self.assertEqual(result.layer, "regulatory")
         self.assertGreaterEqual(result.confidence, LAYER_CONFIDENCE_THRESHOLD)
 
+    def test_regulatory_layer_detected_with_spelled_frequency(self) -> None:
+        text = "I walked twice this week."
+        result = infer_process_layer(text)
+        self.assertEqual(result.layer, "regulatory")
+        self.assertGreaterEqual(result.confidence, LAYER_CONFIDENCE_THRESHOLD)
+
     def test_reflexive_layer_detected_with_routine_and_timeframe(self) -> None:
         text = "I've been walking 4 times a week for months and it's part of my morning routine now."
         result = infer_process_layer(text)

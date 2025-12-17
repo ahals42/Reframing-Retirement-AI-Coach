@@ -67,7 +67,8 @@ FREQUENCY_PATTERNS = [
     r"\b\d+\s*(?:x|times?)\s*(?:each|per|a|this)?\s*(?:day|week|month)\b",
     r"\b\d+\s*(?:days?)\s*(?:each|per|a)\s+week\b",
     r"\b(?:daily|every day|each day|every morning|every evening)\b",
-    r"\b(?:once|twice|thrice)\s*(?:a|per)?\s*(?:week|day)\b",
+    r"\b(?:once|twice|thrice)\s*(?:each|per|a|this|these|last)?\s*(?:week|day)\b",
+    r"\b(?:one|two|three|four|five|six|seven)\s+times?\s*(?:each|per|a|this|these|last)?\s*(?:week|day|month)\b",
 ]
 
 TIMEFRAME_PATTERNS = [
