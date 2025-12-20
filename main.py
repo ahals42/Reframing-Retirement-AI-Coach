@@ -5,12 +5,15 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass, asdict
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from openai import OpenAI
 from dotenv import load_dotenv
 
 from prompts.prompt import build_coach_prompt
+from rag.config import load_rag_config
+from rag.retriever import RagRetriever, RetrievalResult
+from rag.router import QueryRouter, RouteDecision
 
 
 LAYER_CONFIDENCE_THRESHOLD = 0.7
@@ -206,6 +209,31 @@ OPPORTUNITY_KEYWORDS = [
 FREQUENCY_QUESTION = "In the last 7 days, about how many days did you do any purposeful movement, even a short walk counts?"
 ROUTINE_QUESTION = "Do you already have something you do most weeks, or are you still figuring out what could work?"
 TIMEFRAME_QUESTION = "Has this been going on for a while (weeks/months), or is it something you're just starting to experiment with?"
+
+SOURCE_REQUEST_PATTERNS = [
+    re.compile(r"\bsource(s)?\b", flags=re.IGNORECASE),
+    re.compile(r"\breference(s)?\b", flags=re.IGNORECASE),
+    re.compile(r"\bcitation(s)?\b", flags=re.IGNORECASE),
+    re.compile(r"where did that come from", flags=re.IGNORECASE),
+    re.compile(r"show sources?", flags=re.IGNORECASE),
+    re.compile(r"where can i read more", flags=re.IGNORECASE),
+    re.compile(r"where can i find this", flags=re.IGNORECASE),
+    re.compile(r"where in my app", flags=re.IGNORECASE),
+    re.compile(r"show me where", flags=re.IGNORECASE),
+]
+
+KNOWN_ACTIVITY_HUBS = [
+    "Fernwood / Crystal Pool",
+    "Fairfield Gonzales",
+    "James Bay",
+    "Downtown Victoria",
+    "Saanich (G.R. Pearkes or Commonwealth Place)",
+    "Cedar Hill Recreation Centre",
+    "Oaklands",
+    "Oak Bay Recreation Centre / Uplands",
+    "Victoria West",
+    "Online / at home",
+]
 
 
 def _contains_patterns(text: str, patterns: List[str]) -> bool:
@@ -460,6 +488,8 @@ class CoachAgent:
         temperature: float = 0.8,
         top_p: float = 0.9,
         max_tokens: int = 600,
+        retriever: Optional[RagRetriever] = None,
+        router: Optional[QueryRouter] = None,
     ) -> None:
         self.client = client
         self.model = model
@@ -468,6 +498,10 @@ class CoachAgent:
         self.max_tokens = max_tokens
         self.state = ConversationState()
         self.history: List[Dict[str, str]] = []
+        self.retriever = retriever
+        self.router = router or QueryRouter()
+        self.latest_retrieval: Optional[RetrievalResult] = None
+        self.last_retrieval_with_results: Optional[RetrievalResult] = None
 
     def _update_state(self, user_input: str) -> None:
         layer_inference = infer_process_layer(user_input)
@@ -497,16 +531,58 @@ class CoachAgent:
         if time_available:
             self.state.time_available = time_available
 
-    def _build_messages(self, user_input: str) -> List[Dict[str, str]]:
+    def _build_messages(
+        self,
+        user_input: str,
+        context_block: Optional[str] = None,
+        routing_instruction: Optional[str] = None,
+    ) -> List[Dict[str, str]]:
         system_prompt = build_coach_prompt(self.state.to_prompt_mapping())
         messages: List[Dict[str, str]] = [{"role": "system", "content": system_prompt}]
+        if context_block:
+            retrieval_instruction = (
+                "You have access to retrieved slides/activities below. When relevant, ground your answer in them. "
+                "Respond in a conversational tone using a maximum of three sentences total—no bullet lists or numbered lists. "
+                "If the retrieved context includes local activities, mention at least one concrete option by name (with location or schedule) before any reflective coaching. "
+                "If the content is not helpful, briefly say so before proceeding without it."
+            )
+            messages.append({"role": "system", "content": f"{retrieval_instruction}\n\n{context_block}"})
+        if routing_instruction:
+            messages.append({"role": "system", "content": routing_instruction})
         messages.extend(self.history)
         messages.append({"role": "user", "content": user_input})
         return messages
 
     def generate_response(self, user_input: str) -> str:
         self._update_state(user_input)
-        messages = self._build_messages(user_input)
+        context_block = None
+        self.latest_retrieval = None
+        routing_instruction: Optional[str] = None
+        if self.retriever:
+            decision: RouteDecision = self.router.route(user_input)
+            retrieval_result = self.retriever.gather_context(user_input, decision)
+            context_block = retrieval_result.build_prompt_context() if retrieval_result else None
+            self.latest_retrieval = retrieval_result
+            if retrieval_result and (retrieval_result.master_chunks or retrieval_result.activity_chunks):
+                self.last_retrieval_with_results = retrieval_result
+            if decision.needs_location_clarification:
+                routing_instruction = (
+                    "The user mentioned a location that wasn't recognized. Ask a single friendly question like "
+                    "\"Do you live near or feel comfortable traveling to downtown, James Bay, Oak Bay, Saanich, Fairfield, or somewhere else nearby?\""
+                )
+
+        override_citations = False
+        citations_text = ""
+        if self._needs_citations(user_input) and self.last_retrieval_with_results:
+            references = self.last_retrieval_with_results.references()
+            if references:
+                citations_text = self._append_reference_block("", references)
+                override_citations = True
+        messages = self._build_messages(
+            user_input,
+            context_block if not override_citations else None,
+            routing_instruction if not override_citations else None,
+        )
         completion = self.client.chat.completions.create(
             model=self.model,
             temperature=self.temperature,
@@ -515,22 +591,75 @@ class CoachAgent:
             messages=messages,
         )
         assistant_reply = completion.choices[0].message.content.strip()
+        if self._needs_citations(user_input):
+            references_source: Optional[RetrievalResult] = None
+            if self.latest_retrieval and (
+                self.latest_retrieval.master_chunks or self.latest_retrieval.activity_chunks
+            ):
+                references_source = self.latest_retrieval
+            elif self.last_retrieval_with_results:
+                references_source = self.last_retrieval_with_results
+
+            references = references_source.references() if references_source else []
+            assistant_reply = self._append_reference_block(assistant_reply, references)
+
         self.history.append({"role": "user", "content": user_input})
+        if override_citations and citations_text:
+            assistant_reply = citations_text
         self.history.append({"role": "assistant", "content": assistant_reply})
         return assistant_reply
+
+    def _needs_citations(self, user_input: str) -> bool:
+        return any(pattern.search(user_input) for pattern in SOURCE_REQUEST_PATTERNS)
+
+    def _append_reference_block(self, base_text: str, references: List[str]) -> str:
+        if references:
+            module_block = "\n".join(f"- {ref}" for ref in references)
+            return f"{base_text}\n\nFrom your modules, you can find more detail at:\n{module_block}"
+        fallback_msg = (
+            "I couldn’t find a specific slide to cite. "
+            "If you can share more detail about what you’d like to know, I can point to a specific lesson. "
+            "In the meantime, feel free to elaborate and I’ll look for something relevant."
+        )
+        return f"{base_text}\n\n{fallback_msg}"
+
+
+def run_rag_sanity_check(retriever: RagRetriever) -> None:
+    """Query the master index once to confirm retrieval is working."""
+
+    try:
+        chunks = retriever.retrieve_master("What is physical activity?", top_k=1)
+    except Exception as exc:
+        print(f"[RAG check] Failed to query master index: {exc}")
+        return
+
+    if not chunks:
+        print("[RAG check] No slides returned for sanity query.")
+        return
+
+    print(f"[RAG check] Top slide for 'What is physical activity?': {chunks[0].label()}")
 
 
 def main() -> None:
     load_dotenv()
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise ValueError("OPENAI_API_KEY not found in environment variables")
+    config = load_rag_config()
 
-    client = OpenAI(api_key=api_key)
-    model = os.getenv("OPENAI_MODEL", "gpt-4o")
-    agent = CoachAgent(client=client, model=model)
+    client = OpenAI(api_key=config.openai_api_key)
+    retriever: Optional[RagRetriever] = None
+    router = QueryRouter()
 
-    print("What would you like to talk through today around being active? (Type 'exit' or 'quit' to stop.)")
+    try:
+        retriever = RagRetriever(config)
+        run_rag_sanity_check(retriever)
+    except Exception as exc:
+        print(f"[Warning] RAG initialization failed: {exc}. Continuing without vector context.")
+
+    agent = CoachAgent(client=client, model=config.chat_model, retriever=retriever, router=router)
+
+    print(
+        "What would you like to talk through today around being active? If you want to see where this lives in your app "
+        "or learn about nearby activity options, just ask. (Type 'exit' or 'quit' to stop.)"
+    )
     while True:
         try:
             user_text = input("You: ").strip()
