@@ -2,3 +2,4 @@ python-dotenv
 openai>=1.0.0
 llama-index
 qdrant-client
+llama-index-vector-stores-qdrant
