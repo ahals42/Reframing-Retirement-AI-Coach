@@ -24,3 +24,6 @@ pip-wheel-metadata/
 
 # MacOS
 .DS_Store
+
+# Qdrant local vector store
+qdrant_storage/
