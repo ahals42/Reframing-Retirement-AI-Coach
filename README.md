@@ -14,7 +14,7 @@ Conversational CLI agent that embodies a non-clinical, autonomy-supportive physi
    - Copy `.env.example` to `.env` (or create `.env`) with:
      ```
      OPEN_API_KEY=sk-...
-     OPENAI_MODEL=gpt-3.5-turbo   # optional override
+     OPENAI_MODEL=gpt-4o          # optional override; defaults to gpt-4o if omitted
      ```
    - The application uses `python-dotenv` to load this file automatically.
 
@@ -39,4 +39,3 @@ Type messages to converse with the coach. `exit`/`quit` (or Ctrl+C/D) cleanly st
 
 - The agent intentionally avoids clinical/diagnostic guidance and keeps conversations autonomy-supportive.
 - `main.py` currently uses the Chat Completions endpoint via `openai>=1.0.0`. Update `OPENAI_MODEL` if you prefer another compatible model (e.g., `gpt-4o-mini`).
-
