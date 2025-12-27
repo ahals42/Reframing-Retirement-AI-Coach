@@ -1,4 +1,4 @@
-#!/usr/bin/env 
+#!/usr/bin/env bash
 #Use the line to start in terminal: cd /Users/aidanhalley/Documents/Reframing-Retirement && ./scripts/quickstart.sh
 
 set -euo pipefail
@@ -52,5 +52,21 @@ until curl -fsS http://localhost:6333/healthz >/dev/null 2>&1; do
   sleep 1
 done
 
-echo "[run] Starting conversational agent"
-python main.py
+MODE="${QUICKSTART_MODE:-${1:-cli}}"
+API_HOST="${API_HOST:-127.0.0.1}"
+API_PORT="${API_PORT:-8000}"
+
+case "${MODE}" in
+  cli)
+    echo "[run] Starting conversational agent (CLI)"
+    python main.py
+    ;;
+  api)
+    echo "[run] Starting FastAPI server at http://${API_HOST}:${API_PORT}"
+    uvicorn backend.app:app --host "${API_HOST}" --port "${API_PORT}"
+    ;;
+  *)
+    echo "[error] Unknown mode '${MODE}'. Use 'cli' or 'api'." >&2
+    exit 1
+    ;;
+esac

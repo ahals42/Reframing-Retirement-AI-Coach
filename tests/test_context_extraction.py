@@ -2,7 +2,7 @@
 
 import unittest
 
-from main import infer_activities, infer_barrier, infer_time_available
+from coach.agent import infer_activities, infer_barrier, infer_time_available
 
 
 class ContextExtractionTests(unittest.TestCase):
