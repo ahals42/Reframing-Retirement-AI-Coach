@@ -2,7 +2,7 @@
 
 import unittest
 
-from main import (
+from coach.agent import (
     FREQUENCY_QUESTION,
     LAYER_CONFIDENCE_THRESHOLD,
     ROUTINE_QUESTION,

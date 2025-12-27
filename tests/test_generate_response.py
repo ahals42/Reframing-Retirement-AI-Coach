@@ -2,7 +2,7 @@
 
 import unittest
 
-from main import CoachAgent
+from coach import CoachAgent
 
 
 class StubCompletion:

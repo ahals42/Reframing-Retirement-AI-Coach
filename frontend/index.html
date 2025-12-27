@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Reframing Retirement Coach</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header>
+        <h1>Reframing Retirement Coach</h1>
+        <p class="tagline">A gentle space to explore movement ideas after retirement.</p>
+      </header>
+      <section id="chat" class="chat-window" aria-live="polite"></section>
+      <form id="chat-form" class="chat-form" autocomplete="off">
+        <input id="message-input" type="text" name="message" placeholder="Type a message..." required />
+        <button type="submit">Send</button>
+      </form>
+      <button id="reset-session" class="reset-button" type="button">Start fresh</button>
+    </main>
+    <script>
+      window.API_BASE_URL = window.API_BASE_URL || "http://localhost:8000";
+    </script>
+    <script src="app.js" type="module"></script>
+  </body>
+</html>
