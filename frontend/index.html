@@ -8,9 +8,24 @@
   </head>
   <body>
     <main class="app-shell">
-      <header>
-        <h1>Reframing Retirement Coach</h1>
-        <p class="tagline">A gentle space to explore movement ideas after retirement.</p>
+      <header class="hero">
+        <div class="hero__brand">
+          <img src="logo.svg" class="hero__logo" alt="Reframing Retirement Coach logo" />
+          <div>
+            <h1>Reframing Retirement Coach</h1>
+            <p class="hero__tagline">A Supportive Coach for Everyday Movement</p>
+          </div>
+        </div>
+        <div class="hero__disclaimer" role="note" aria-label="Coach scope and limitations">
+          <p>
+            <strong>What this coach does:</strong>
+            This coach supports everyday physical activity through planning, motivation, and habit-building. It can also help you identify local ways to get involved and be active, and point you toward relevant information or resources based on what you’d like to explore in the Reframing Retirement module.
+          </p>
+          <p>
+            <strong>What it does not do:</strong>
+            It is not a medical professional and does not give medical advice, diagnose conditions, or assess risk. For medical questions or urgent concerns, consult a healthcare professional.
+          </p>
+        </div>
       </header>
       <section id="chat" class="chat-window" aria-live="polite"></section>
       <form id="chat-form" class="chat-form" autocomplete="off">
