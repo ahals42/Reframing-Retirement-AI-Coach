@@ -1,8 +1,8 @@
 :root {
   color-scheme: light;
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background: #f5f7fb;
-  color: #1f2933;
+  background: #f1f4f2;
+  color: #243333;
 }
 
 body {
@@ -11,7 +11,7 @@ body {
   display: flex;
   justify-content: center;
   padding: 2rem 1rem;
-  background: radial-gradient(circle at top, #f5f7fb, #dbe7ff);
+  background: radial-gradient(circle at top, #f1f4f2, #cce3e7);
 }
 
 .app-shell {
@@ -19,30 +19,78 @@ body {
   background: #ffffff;
   border-radius: 16px;
   padding: 1.5rem;
-  box-shadow: 0 20px 50px rgba(31, 41, 55, 0.12);
+  box-shadow: 0 20px 50px rgba(30, 60, 70, 0.12);
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  color: #243333;
 }
 
-header h1 {
+h1,
+h2,
+h3 {
+  color: #1f4d4f;
+}
+
+.hero {
+  border: 1px solid #d5e3e6;
+  border-radius: 14px;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(233, 248, 248, 0.95), rgba(213, 233, 230, 0.7));
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.hero__brand {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.hero__logo {
+  width: 72px;
+  height: auto;
+}
+
+.hero__brand h1 {
   margin: 0;
-  font-size: 1.6rem;
+  font-size: 1.5rem;
+  color: #1f4d4f;
 }
 
-.tagline {
-  margin: 0.25rem 0 0;
-  color: #52606d;
+.hero__tagline {
+  margin: 0.2rem 0 0;
+  color: #335d5f;
   font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.hero__disclaimer {
+  font-size: 0.9rem;
+  color: #243333;
+  line-height: 1.4;
+  background: #fff;
+  border-radius: 12px;
+  padding: 0.75rem;
+  border: 1px solid #d1ddd5;
+}
+
+.hero__disclaimer p {
+  margin: 0 0 0.6rem;
+}
+
+.hero__disclaimer p:last-child {
+  margin-bottom: 0;
 }
 
 .chat-window {
   flex: 1;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #d8e1dc;
   border-radius: 12px;
   padding: 1rem;
   overflow-y: auto;
-  background: #f9fafb;
+  background: #f6f9f7;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -57,14 +105,15 @@ header h1 {
 
 .bubble.user {
   align-self: flex-end;
-  background: #3b82f6;
-  color: #fff;
+  background: #ffffff;
+  color: #1f4d4f;
+  border: 1px solid #c3d7d0;
 }
 
 .bubble.bot {
   align-self: flex-start;
-  background: #e0f2fe;
-  color: #1e3a8a;
+  background: #e9e4d8;
+  color: #243333;
 }
 
 .chat-form {
@@ -76,28 +125,48 @@ header h1 {
   flex: 1;
   padding: 0.75rem;
   border-radius: 12px;
-  border: 1px solid #cbd5f5;
+  border: 1px solid #c1d5cf;
   font-size: 1rem;
+  color: #243333;
+}
+
+.chat-form input:focus {
+  outline: 2px solid #2e8bc0;
+  outline-offset: 2px;
 }
 
 .chat-form button {
-  background: #2563eb;
-  color: #fff;
+  background: #2e8bc0;
+  color: #ffffff;
   border: none;
   border-radius: 12px;
   padding: 0 1.25rem;
   font-size: 1rem;
   cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.chat-form button:hover,
+.chat-form button:focus {
+  background: #287da9;
 }
 
 .reset-button {
   border: none;
-  background: transparent;
-  color: #475569;
+  background: #8fb8a8;
+  color: #1f4d4f;
   cursor: pointer;
   font-size: 0.9rem;
-  text-decoration: underline;
+  border-radius: 999px;
+  padding: 0.4rem 1rem;
   align-self: center;
+  transition: filter 0.2s ease;
+}
+
+.reset-button:hover,
+.reset-button:focus {
+  filter: brightness(0.95);
+  outline: none;
 }
 
 .typing {

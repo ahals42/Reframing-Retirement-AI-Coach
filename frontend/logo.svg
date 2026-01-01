@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="360" height="240" viewBox="0 0 360 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Reframing Retirement Coach logo</title>
+  <desc id="desc">Two older adults walking along a shoreline path with hills and birds in the background.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#eef6ff"/>
+      <stop offset="100%" stop-color="#cde4ff"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2094c6"/>
+      <stop offset="100%" stop-color="#1d6fb5"/>
+    </linearGradient>
+    <linearGradient id="path" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f2d1a2"/>
+      <stop offset="100%" stop-color="#d9b472"/>
+    </linearGradient>
+  </defs>
+  <rect width="360" height="240" rx="120" ry="120" fill="#f7fbff"/>
+  <g transform="translate(30 20)">
+    <rect width="300" height="200" rx="110" ry="110" fill="url(#sky)"/>
+    <path d="M0,130 C80,100 120,90 200,100 C260,106 280,100 300,90 L300,210 L0,210Z" fill="url(#water)"/>
+    <path d="M0,200 C60,170 130,160 200,165 C260,168 300,185 300,210 L0,210Z" fill="url(#path)"/>
+    <path d="M180,130 C210,115 240,110 300,110 L300,210 L210,210 C200,190 185,150 180,130Z" fill="#7fc38a"/>
+    <circle cx="230" cy="50" r="18" fill="#ffe48f"/>
+    <path d="M250,30 Q260,45 290,40" stroke="#acd58f" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M230,30 Q240,36 260,34" stroke="#acd58f" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="M120,60 Q150,40 200,60" stroke="#8fc4a6" stroke-width="18" fill="none" stroke-linecap="round"/>
+    <g transform="translate(100 75)">
+      <circle cx="28" cy="18" r="12" fill="#184763"/>
+      <rect x="20" y="30" width="16" height="38" rx="8" fill="#184763"/>
+      <path d="M28,68 L20,108" stroke="#0e2c43" stroke-width="9" stroke-linecap="round"/>
+      <path d="M36,68 L42,108" stroke="#0e2c43" stroke-width="9" stroke-linecap="round"/>
+      <path d="M20,42 L8,72" stroke="#0e2c43" stroke-width="8" stroke-linecap="round"/>
+      <path d="M36,40 L52,68" stroke="#0e2c43" stroke-width="8" stroke-linecap="round"/>
+    </g>
+    <g transform="translate(150 85)">
+      <circle cx="28" cy="14" r="11" fill="#226d82"/>
+      <rect x="20" y="25" width="16" height="36" rx="8" fill="#226d82"/>
+      <path d="M28,62 L22,98" stroke="#1a4c5c" stroke-width="8" stroke-linecap="round"/>
+      <path d="M36,62 L44,98" stroke="#1a4c5c" stroke-width="8" stroke-linecap="round"/>
+      <path d="M20,40 L10,68" stroke="#1a4c5c" stroke-width="7" stroke-linecap="round"/>
+      <path d="M36,38 L50,64" stroke="#1a4c5c" stroke-width="7" stroke-linecap="round"/>
+    </g>
+    <path d="M230,120 Q250,95 300,105" stroke="#7fb182" stroke-width="16" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>
