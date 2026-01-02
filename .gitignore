@@ -27,3 +27,6 @@ pip-wheel-metadata/
 
 # Qdrant local vector store
 qdrant_storage/
+
+# Local devops notes
+devops/local-browser-guide.md

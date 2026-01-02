@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#Use the line to start in terminal: cd /Users/aidanhalley/Documents/Reframing-Retirement && ./scripts/quickstart.sh
+#Use this from the repo root, e.g., cd <repo>/Reframing-Retirement && ./scripts/quickstart.sh
 
 set -euo pipefail
 
