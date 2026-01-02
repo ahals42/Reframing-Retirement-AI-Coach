@@ -17,7 +17,7 @@ async function init() {
     sessionStorage.setItem("rr-session", sessionId);
   }
   appendBotBubble(
-    "Hi there! I'm here to gently explore what movement could feel good for you. I'm listening."
+    "Hi! What would you like to talk about today when it comes to physical activity?"
   );
 }
 

@@ -589,7 +589,7 @@ class CoachAgent:
         override_citations = False
         override_text = ""
         if needs_citations and self.last_retrieval_with_results:
-            references = self.last_retrieval_with_results.references()
+            references = self._filter_lesson_references(self.last_retrieval_with_results.references())
             if references:
                 override_text = self._append_reference_block("", references)
                 override_citations = True
@@ -619,7 +619,9 @@ class CoachAgent:
     def _maybe_append_citations(self, text: str, prepared: _PreparedPrompt) -> str:
         if not prepared.needs_citations:
             return text
-        references = prepared.references_source.references() if prepared.references_source else []
+        references = []
+        if prepared.references_source:
+            references = self._filter_lesson_references(prepared.references_source.references())
         return self._append_reference_block(text, references)
 
     def _record_exchange(self, user_input: str, assistant_reply: str) -> None:
@@ -661,6 +663,12 @@ class CoachAgent:
             "In the meantime, feel free to elaborate and I’ll look for something relevant."
         )
         return f"{base_text}\n\n{fallback_msg}"
+
+    @staticmethod
+    def _filter_lesson_references(references: List[str]) -> List[str]:
+        """Keep only lesson references for citation blocks."""
+
+        return [reference for reference in references if reference.startswith("Lesson ")]
 
     def _update_state(self, user_input: str) -> None:
         layer_inference = infer_process_layer(user_input)
