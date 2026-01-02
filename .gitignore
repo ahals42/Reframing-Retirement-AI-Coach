@@ -29,4 +29,4 @@ pip-wheel-metadata/
 qdrant_storage/
 
 # Local devops notes
-devops/local-browser-guide.md
+devops/
