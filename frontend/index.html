@@ -6,35 +6,79 @@
     <title>Reframing Retirement Coach</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
+
   <body>
     <main class="app-shell">
       <header class="hero">
         <div class="hero__brand">
-          <img src="logo.svg" class="hero__logo" alt="Reframing Retirement Coach logo" />
+          <img
+            src="logo.svg"
+            class="hero__logo"
+            alt="Reframing Retirement Coach logo"
+          />
           <div>
             <h1>Reframing Retirement Coach</h1>
           </div>
         </div>
-        <div class="hero__disclaimer" role="note" aria-label="Coach scope and limitations">
+
+        <div
+          class="hero__disclaimer"
+          role="note"
+          aria-label="Coach scope and limitations"
+        >
           <p>
             <strong>What It Does:</strong>
-            Supports everyday physical activity by helping you think through what works for you, stay motivated, and adapt activity in ways that fit your life. It can also help you explore local opportunities to be active and connect you with relevant information or resources within the Reframing Retirement module.
+            Supports everyday physical activity by helping you reflect on what
+            works for you, stay motivated, and adapt activity in ways that fit
+            your life. It can also help you explore local opportunities to be
+            active and connect you with relevant information or resources within
+            the Reframing Retirement module.
           </p>
+
           <p>
             <strong>What It Does Not Do:</strong>
-            It is not intended to replace a medical professional and does not provide medical advice, diagnoses, or risk assessments. For medical questions or urgent health concerns, users should consult a qualified healthcare professional.
+            It is not intended to replace a medical professional and does not
+            provide medical advice, diagnoses, or risk assessments. For medical
+            questions or urgent health concerns, users should consult a
+            qualified healthcare professional.
+          </p>
         </div>
       </header>
-      <section id="chat" class="chat-window" aria-live="polite"></section>
-      <form id="chat-form" class="chat-form" autocomplete="off">
-        <input id="message-input" type="text" name="message" placeholder="Type a message..." required />
+
+      <section
+        id="chat"
+        class="chat-window"
+        aria-live="polite"
+      ></section>
+
+      <form
+        id="chat-form"
+        class="chat-form"
+        autocomplete="off"
+      >
+        <input
+          id="message-input"
+          type="text"
+          name="message"
+          placeholder="Type a message..."
+          required
+        />
         <button type="submit">Send</button>
       </form>
-      <button id="reset-session" class="reset-button" type="button">Start fresh</button>
+
+      <button
+        id="reset-session"
+        class="reset-button"
+        type="button"
+      >
+        Start fresh
+      </button>
     </main>
+
     <script>
-      window.API_BASE_URL = window.API_BASE_URL || "http://localhost:8000";
+      window.API_BASE_URL = window.API_BASE_URL || "/api";
     </script>
+
     <script src="app.js" type="module"></script>
   </body>
 </html>
