@@ -1,14 +1,24 @@
 # Reframing Retirement Coach
+An autonomy-supportive chat coach that helps newly retired adults plan realistic physical activity by combining retrieval-augmented context with OpenAI guidance.
 
-A calm, autonomy-supportive physical-activity coach for newly retired adults. It runs on OpenAI’s Chat Completions API with lightweight behavior heuristics, never gives medical advice or emergency help, and is deployed as a FastAPI service running in a container on cloud compute (with an optional local CLI for development).
+## How It Works
+The user chats through a lightweight browser UI that streams messages to a FastAPI service. The API spins up a `CoachAgent` session, keeps conversational state in memory, optionally queries the Qdrant vector store for local resources, then composes a grounded prompt for the OpenAI Chat API before streaming the reply back to the browser.
 
-## Components
+## Key Features
+- **Behavior-aware coaching:** The agent silently tracks barriers, preferred activities, and time windows to keep suggestions realistic.
+- **Retrieval on demand:** A Qdrant-backed RAG pipeline injects lesson content and local activity options when the user asks for specifics.
+- **Browser-first local testing:** The static frontend can hit a local FastAPI instance, giving you the full chat experience in your browser before ever deploying.
+- **Safety-first prompt design:** The system prompt enforces scope boundaries (non-clinical, no emergencies) and a motivational interviewing style.
 
-- `prompts/` – base system prompt that defines tone, scope, and safety boundaries for the coach.  
-- `coach/agent.py` – conversational brain: tracks inferred barriers/preferences/time, routes to retrieval, and streams OpenAI responses.  
-- `rag/` – configuration + tools for building and querying a Qdrant vector store of activities/resources.  
-- `backend/app.py` – FastAPI server with session storage and SSE endpoints (`/sessions`, `/sessions/{id}/messages`, `/healthz`).  
-- `frontend/` – lightweight vanilla-JS chat UI that talks to the API (set `window.API_BASE_URL` to your container IP).  
-- `main.py` – local CLI entry point that shares the same agent logic for offline testing.  
-- `scripts/quickstart.sh` – bootstraps the virtualenv, installs deps, ensures Qdrant is running via Docker, and starts `uvicorn` (`API_HOST=0.0.0.0` for cloud).  
-- `Data/` – curated text/activity references used to seed the RAG store.make th
+## Experience Snapshot
+![Browser conversation screenshot showing the coach answering winter walking questions](docs/assets/browser-chat.png)
+
+## Logical System Architecture (Component-Level Flow)
+This diagram explains what the system is and how information moves: the retiree’s chat request flows through the frontend, FastAPI layer, in-memory session store, conversation engine, optional RAG retriever, and finally to the OpenAI API before streaming back.
+
+![Logical system architecture flow](docs/assets/logical-architecture.png)
+
+## Deployed Cloud Architecture (Runtime & Infrastructure Flow)
+This view shows where everything runs today: the browser talks over HTTP to the AWS-hosted frontend, which forwards chat POST/SSE requests to the FastAPI service. That service manages sessions, pulls vectors from the Qdrant store running on the same AWS host, and sends prompts to OpenAI.
+
+![Cloud runtime flow](docs/assets/cloud-architecture.png)
