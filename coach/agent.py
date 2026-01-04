@@ -1,4 +1,4 @@
-"""Core conversational agent logic shared by CLI and API layers."""
+"""Core conversational agent logic"""
 
 from __future__ import annotations
 
