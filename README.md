@@ -1,6 +1,10 @@
 # Reframing Retirement Coach
 An autonomy-supportive chat coach that helps newly retired adults plan realistic physical activity by combining retrieval-augmented context with OpenAI guidance.
 
+## Project Status
+Deployed cloud hosted MVP under active development.
+The system is undergoing ongoing output evaluation and iterative feature development in advance of a planned feasibility study.
+
 ## How It Works
 The user chats through a lightweight browser UI that streams messages to a FastAPI service. The API spins up a `CoachAgent` session, keeps conversational state in memory, optionally queries the Qdrant vector store for local resources, then composes a grounded prompt for the OpenAI Chat API before streaming the reply back to the browser.
 
