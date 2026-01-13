@@ -18,6 +18,7 @@ from rag.router import QueryRouter
 
 from .models import DeleteSessionResponse, MessageRequest, SessionCreateResponse
 from .session_store import InMemorySessionStore
+from .voice.routes import create_voice_router
 
 load_dotenv()
 
@@ -46,6 +47,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(create_voice_router(session_store, client))
 
 
 @app.get("/healthz")
