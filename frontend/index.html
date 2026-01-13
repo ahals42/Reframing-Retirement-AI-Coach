@@ -11,14 +11,7 @@
     <main class="app-shell">
       <header class="hero">
         <div class="hero__brand">
-          <img
-            src="rr-robot-image.png"
-            class="hero__logo"
-            alt="Reframing Retirement Coach logo"
-          />
-          <div>
-            <h1>Reframing Retirement Coach</h1>
-          </div>
+          <h1>Reframing Retirement Coach</h1>
         </div>
 
         <div
@@ -56,6 +49,26 @@
         class="chat-form"
         autocomplete="off"
       >
+        <button
+          id="mic-button"
+          class="mic-button"
+          type="button"
+          aria-pressed="false"
+          aria-labelledby="mic-label"
+        >
+          <img
+            src="MicrophonePhoto.png"
+            class="mic-icon"
+            alt=""
+            aria-hidden="true"
+          />
+          <span
+            id="mic-label"
+            class="sr-only"
+          >
+            Hold to talk
+          </span>
+        </button>
         <input
           id="message-input"
           type="text"
@@ -63,15 +76,34 @@
           placeholder="Type a message..."
           required
         />
-        <button type="submit">Send</button>
+        <button
+          type="submit"
+          class="send-button"
+          aria-label="Send message"
+        >
+          <img
+            src="SendButton.png"
+            class="send-icon"
+            alt=""
+            aria-hidden="true"
+          />
+          <span class="sr-only">Send</span>
+        </button>
       </form>
 
       <button
         id="reset-session"
         class="reset-button"
         type="button"
+        aria-label="Start fresh"
       >
-        Start fresh
+        <img
+          src="RefreshPhoto.png"
+          class="reset-icon"
+          alt=""
+          aria-hidden="true"
+        />
+        <span class="sr-only">Start fresh</span>
       </button>
     </main>
 

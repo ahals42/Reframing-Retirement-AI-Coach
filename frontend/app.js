@@ -3,12 +3,21 @@ const API_BASE_URL = window.API_BASE_URL ?? "http://localhost:8000";
 const chatWindow = document.getElementById("chat");
 const form = document.getElementById("chat-form");
 const messageInput = document.getElementById("message-input");
+const micButton = document.getElementById("mic-button");
+const micLabel = document.getElementById("mic-label");
 const resetButton = document.getElementById("reset-session");
 
 let sessionId = null;
 let typingNode = null;
+let mediaRecorder = null;
+let mediaStream = null;
+let recordedChunks = [];
+let isRecording = false;
+let recordIntent = false;
+let activeAudio = null;
 
 init();
+setupVoiceControls();
 
 async function init() {
   sessionId = sessionStorage.getItem("rr-session");
@@ -49,6 +58,222 @@ resetButton.addEventListener("click", async () => {
   clearChat();
   await init();
 });
+
+function setupVoiceControls() {
+  if (!micButton) {
+    return;
+  }
+  if (!navigator.mediaDevices || !window.MediaRecorder) {
+    micButton.disabled = true;
+    setMicButtonLabel("Voice unavailable");
+    return;
+  }
+
+  micButton.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    micButton.setPointerCapture(event.pointerId);
+    recordIntent = true;
+    startRecording();
+  });
+  micButton.addEventListener("pointerup", () => {
+    recordIntent = false;
+    stopRecording();
+  });
+  micButton.addEventListener("pointerleave", () => {
+    recordIntent = false;
+    stopRecording();
+  });
+  micButton.addEventListener("pointercancel", () => {
+    recordIntent = false;
+    stopRecording();
+  });
+  micButton.addEventListener("keydown", (event) => {
+    if (event.code === "Space" || event.code === "Enter") {
+      event.preventDefault();
+      recordIntent = true;
+      startRecording();
+    }
+  });
+  micButton.addEventListener("keyup", (event) => {
+    if (event.code === "Space" || event.code === "Enter") {
+      event.preventDefault();
+      recordIntent = false;
+      stopRecording();
+    }
+  });
+
+  window.addEventListener("blur", () => {
+    recordIntent = false;
+    stopRecording();
+  });
+}
+
+async function startRecording() {
+  if (isRecording) {
+    return;
+  }
+
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (err) {
+    appendBotBubble("Something went wrong. Please try again.");
+    return;
+  }
+
+  const mimeType = pickSupportedMimeType();
+  recordedChunks = [];
+
+  try {
+    mediaRecorder = mimeType
+      ? new MediaRecorder(mediaStream, { mimeType })
+      : new MediaRecorder(mediaStream);
+  } catch (err) {
+    stopMediaTracks();
+    appendBotBubble("Something went wrong. Please try again.");
+    return;
+  }
+
+  mediaRecorder.addEventListener("dataavailable", (event) => {
+    if (event.data && event.data.size > 0) {
+      recordedChunks.push(event.data);
+    }
+  });
+
+  mediaRecorder.addEventListener("stop", async () => {
+    stopMediaTracks();
+    isRecording = false;
+    setMicButtonState(false);
+
+    if (!recordedChunks.length) {
+      return;
+    }
+
+    const blobType = mediaRecorder.mimeType || mimeType || "audio/webm";
+    const audioBlob = new Blob(recordedChunks, { type: blobType });
+    await sendVoiceMessage(audioBlob);
+  });
+
+  mediaRecorder.start();
+  isRecording = true;
+  setMicButtonState(true);
+
+  if (!recordIntent) {
+    stopRecording();
+  }
+}
+
+function stopRecording() {
+  if (!isRecording || !mediaRecorder) {
+    return;
+  }
+  if (mediaRecorder.state !== "inactive") {
+    mediaRecorder.stop();
+  }
+}
+
+function stopMediaTracks() {
+  if (!mediaStream) {
+    return;
+  }
+  mediaStream.getTracks().forEach((track) => track.stop());
+  mediaStream = null;
+}
+
+function pickSupportedMimeType() {
+  if (!window.MediaRecorder) {
+    return "";
+  }
+  const candidates = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/ogg;codecs=opus",
+    "audio/mp4",
+  ];
+  return candidates.find((type) => MediaRecorder.isTypeSupported(type)) || "";
+}
+
+function setMicButtonState(recording) {
+  if (!micButton) {
+    return;
+  }
+  micButton.classList.toggle("recording", recording);
+  micButton.setAttribute("aria-pressed", recording ? "true" : "false");
+  setMicButtonLabel(recording ? "Release to send" : "Hold to talk");
+}
+
+function setMicButtonLabel(text) {
+  if (micLabel) {
+    micLabel.textContent = text;
+  }
+  if (micButton) {
+    micButton.title = text;
+  }
+}
+
+async function sendVoiceMessage(audioBlob) {
+  showTyping();
+  try {
+    if (!sessionId) {
+      sessionId = await createSession();
+      sessionStorage.setItem("rr-session", sessionId);
+    }
+
+    const formData = new FormData();
+    const extension = guessExtension(audioBlob.type);
+    formData.append("audio", audioBlob, `voice-input.${extension}`);
+
+    const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/voice-chat`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error("The coach is unavailable right now.");
+    }
+
+    const data = await response.json();
+    if (data.transcript) {
+      appendUserBubble(data.transcript);
+    }
+
+    appendBotBubble(data.reply_text || "Something went wrong.");
+    playReplyAudio(data.reply_audio, data.reply_audio_mime);
+  } catch (err) {
+    appendBotBubble(err.message || "Something went wrong.");
+  } finally {
+    hideTyping();
+  }
+}
+
+function guessExtension(mimeType) {
+  if (!mimeType) {
+    return "webm";
+  }
+  if (mimeType.includes("ogg")) {
+    return "ogg";
+  }
+  if (mimeType.includes("mp4")) {
+    return "mp4";
+  }
+  if (mimeType.includes("wav")) {
+    return "wav";
+  }
+  return "webm";
+}
+
+function playReplyAudio(base64Audio, mimeType) {
+  if (!base64Audio) {
+    return;
+  }
+  if (activeAudio) {
+    activeAudio.pause();
+    activeAudio = null;
+  }
+  const source = `data:${mimeType || "audio/mpeg"};base64,${base64Audio}`;
+  const audio = new Audio(source);
+  activeAudio = audio;
+  audio.play().catch(() => {});
+}
 
 async function streamAssistantResponse(text) {
   showTyping();
