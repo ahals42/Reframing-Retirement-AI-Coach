@@ -5,3 +5,4 @@ qdrant-client
 llama-index-vector-stores-qdrant
 fastapi
 uvicorn[standard]
+python-multipart
