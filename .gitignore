@@ -30,3 +30,10 @@ qdrant_storage/
 
 # Local devops notes
 devops/
+
+# Local-only docker overrides
+docker-compose.override.yml
+
+# Local-only frontend dev helpers (do not commit)
+frontend/index.dev.html
+frontend/dev-auth.js

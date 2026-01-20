@@ -1,8 +1,19 @@
+# Core dependencies
 python-dotenv
 openai>=1.0.0
+
+# Vector database and RAG
 llama-index
 qdrant-client
 llama-index-vector-stores-qdrant
+
+# Web framework
 fastapi
 uvicorn[standard]
 python-multipart
+
+# Security: Rate limiting (slowapi is compatible with FastAPI and uses Flask-Limiter under the hood)
+slowapi>=0.1.9
+
+# Security: Input validation (included with FastAPI via pydantic)
+# pydantic is already included with FastAPI
