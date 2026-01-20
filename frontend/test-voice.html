@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Voice Test</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <div class="hero__brand">
+          <h1>Voice Test Page</h1>
+        </div>
+      </header>
+
+      <section id="chat" class="chat-window" aria-live="polite"></section>
+
+      <form id="chat-form" class="chat-form" autocomplete="off">
+        <button id="mic-button" class="mic-button" type="button" aria-pressed="false" aria-labelledby="mic-label">
+          <img src="MicrophonePhoto.png" class="mic-icon" alt="" aria-hidden="true" />
+          <span id="mic-label" class="sr-only">Hold to talk</span>
+        </button>
+        <input id="message-input" type="text" name="message" placeholder="Type a message..." required />
+        <button type="submit" class="send-button" aria-label="Send message">
+          <img src="SendButton.png" class="send-icon" alt="" aria-hidden="true" />
+          <span class="sr-only">Send</span>
+        </button>
+      </form>
+
+      <button id="reset-session" class="reset-button" type="button" aria-label="Start fresh">
+        <img src="RefreshPhoto.png" class="reset-icon" alt="" aria-hidden="true" />
+        <span class="sr-only">Start fresh</span>
+      </button>
+    </main>
+
+    <script>
+      // Force localhost and set API key directly
+      window.API_BASE_URL = "http://localhost:8000";
+      // TODO: Set your API key here for local testing
+      window.DEV_API_KEY = "your-api-key-here";
+      console.log("Test page loaded with API key configured");
+    </script>
+
+    <script src="dev-auth.js"></script>
+    <script src="app.js" type="module"></script>
+  </body>
+</html>

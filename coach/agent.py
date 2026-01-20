@@ -1,10 +1,12 @@
-"""Core conversational agent logic"""
+"""Core conversational agent logic with security controls"""
 
 from __future__ import annotations
 
 import re
+import os
+import logging
 from dataclasses import dataclass, asdict
-from typing import Dict, Generator, List, Optional
+from typing import Dict, Generator, List, Optional, Pattern
 
 from openai import OpenAI
 
@@ -12,7 +14,13 @@ from prompts.prompt import build_coach_prompt
 from rag.retriever import RagRetriever, RetrievalResult, RetrievedChunk
 from rag.router import QueryRouter, RouteDecision
 
+logger = logging.getLogger(__name__)
+
+# Security constants
 LAYER_CONFIDENCE_THRESHOLD = 0.7
+MAX_HISTORY_MESSAGES = int(os.getenv("MAX_HISTORY_MESSAGES", "100"))
+MAX_INPUT_LENGTH = int(os.getenv("MAX_MESSAGE_LENGTH", "10000"))
+STREAMING_TIMEOUT_SECONDS = int(os.getenv("STREAMING_TIMEOUT_SECONDS", "300"))  # 5 minutes
 
 
 @dataclass
@@ -62,19 +70,21 @@ class ConversationState:
         return asdict(self)
 
 
-FREQUENCY_PATTERNS = [
-    r"\b\d+\s*(?:x|times?)\s*(?:each|per|a|this)?\s*(?:day|week|month)\b",
-    r"\b\d+\s*(?:days?)\s*(?:each|per|a)\s+week\b",
-    r"\b(?:daily|every day|each day|every morning|every evening)\b",
-    r"\b(?:once|twice|thrice)\s*(?:each|per|a|this|these|last)?\s*(?:week|day)\b",
-    r"\b(?:one|two|three|four|five|six|seven)\s+times?\s*(?:each|per|a|this|these|last)?\s*(?:week|day|month)\b",
+# Compiled regex patterns for better performance
+# These patterns detect behavioral signals and user intent
+FREQUENCY_PATTERNS: List[Pattern] = [
+    re.compile(r"\b\d+\s*(?:x|times?)\s*(?:each|per|a|this)?\s*(?:day|week|month)\b", re.IGNORECASE),
+    re.compile(r"\b\d+\s*(?:days?)\s*(?:each|per|a)\s+week\b", re.IGNORECASE),
+    re.compile(r"\b(?:daily|every day|each day|every morning|every evening)\b", re.IGNORECASE),
+    re.compile(r"\b(?:once|twice|thrice)\s*(?:each|per|a|this|these|last)?\s*(?:week|day)\b", re.IGNORECASE),
+    re.compile(r"\b(?:one|two|three|four|five|six|seven)\s+times?\s*(?:each|per|a|this|these|last)?\s*(?:week|day|month)\b", re.IGNORECASE),
 ]
 
-TIMEFRAME_PATTERNS = [
-    r"\bfor\s+\d+\s+(?:weeks?|months?|years?)\b",
-    r"\bfor\s+(?:weeks|months|years)\b",
-    r"\bsince\s+\w+\b",
-    r"\bover\s+the\s+last\s+\d+\s+(?:weeks?|months?|years?)\b",
+TIMEFRAME_PATTERNS: List[Pattern] = [
+    re.compile(r"\bfor\s+\d+\s+(?:weeks?|months?|years?)\b", re.IGNORECASE),
+    re.compile(r"\bfor\s+(?:weeks|months|years)\b", re.IGNORECASE),
+    re.compile(r"\bsince\s+\w+\b", re.IGNORECASE),
+    re.compile(r"\bover\s+the\s+last\s+\d+\s+(?:weeks?|months?|years?)\b", re.IGNORECASE),
 ]
 
 ROUTINE_KEYWORDS = [
@@ -218,65 +228,65 @@ SOURCE_REQUEST_PATTERNS = [
     re.compile(r"show me where", flags=re.IGNORECASE),
 ]
 
-LOWEST_MPAC_STRONG_PATTERNS = [
-    r"\bwhy bother\b",
-    r"\bwhat'?s the point\b",
-    r"\bwhat'?s the use\b",
-    r"\bno point\b",
-    r"\bpointless\b",
-    r"\bnot worth (?:it|the effort)\b",
-    r"\btoo late for me\b",
+# Patterns for detecting lowest M-PAC (unmotivated/disengaged language)
+LOWEST_MPAC_STRONG_PATTERNS: List[Pattern] = [
+    re.compile(r"\bwhy bother\b", re.IGNORECASE),
+    re.compile(r"\bwhat'?s the point\b", re.IGNORECASE),
+    re.compile(r"\bwhat'?s the use\b", re.IGNORECASE),
+    re.compile(r"\bno point\b", re.IGNORECASE),
+    re.compile(r"\bpointless\b", re.IGNORECASE),
+    re.compile(r"\bnot worth (?:it|the effort)\b", re.IGNORECASE),
+    re.compile(r"\btoo late for me\b", re.IGNORECASE),
 ]
 
-LOWEST_MPAC_ACTIVITY_PATTERNS = [
-    r"\b(can't|cannot) be bothered\b.*\b(exercise|physical activity|being active|move|movement)\b",
-    r"\bno intention\b.*\b(exercise|physical activity|being active|move|movement)\b",
-    r"\bnot interested\b.*\b(exercise|physical activity|being active|move|movement)\b",
-    r"\b(don'?t|do not)\s+want\s+to\s+be\s+active\b",
-    r"\b(don'?t|do not)\s+want\s+to\s+exercise\b",
-    r"\b(don'?t|do not)\s+want\s+to\s+move\b",
-    r"\bnever going to\b.*\b(exercise|physical activity|being active|move|movement|start)\b",
-    r"\bwon't ever\b.*\b(exercise|physical activity|being active|move|movement|start)\b",
-    r"\bnot going to\b.*\b(exercise|physical activity|being active|move|movement|start)\b",
+LOWEST_MPAC_ACTIVITY_PATTERNS: List[Pattern] = [
+    re.compile(r"\b(can't|cannot) be bothered\b.*\b(exercise|physical activity|being active|move|movement)\b", re.IGNORECASE),
+    re.compile(r"\bno intention\b.*\b(exercise|physical activity|being active|move|movement)\b", re.IGNORECASE),
+    re.compile(r"\bnot interested\b.*\b(exercise|physical activity|being active|move|movement)\b", re.IGNORECASE),
+    re.compile(r"\b(don'?t|do not)\s+want\s+to\s+be\s+active\b", re.IGNORECASE),
+    re.compile(r"\b(don'?t|do not)\s+want\s+to\s+exercise\b", re.IGNORECASE),
+    re.compile(r"\b(don'?t|do not)\s+want\s+to\s+move\b", re.IGNORECASE),
+    re.compile(r"\bnever going to\b.*\b(exercise|physical activity|being active|move|movement|start)\b", re.IGNORECASE),
+    re.compile(r"\bwon't ever\b.*\b(exercise|physical activity|being active|move|movement|start)\b", re.IGNORECASE),
+    re.compile(r"\bnot going to\b.*\b(exercise|physical activity|being active|move|movement|start)\b", re.IGNORECASE),
 ]
 
-GENERAL_DISINTEREST_PATTERNS = [
-    r"\bi\s+don'?t\s+want\s+to\s+be\s+active\b",
-    r"\bi\s+don'?t\s+want\s+to\s+exercise\b",
-    r"\bi\s+don'?t\s+want\s+to\s+move\b",
-    r"\bnot\s+interested\s+in\s+being\s+active\b",
-    r"\bnot\s+interested\s+in\s+physical\s+activity\b",
-    r"\bnot\s+interested\s+in\s+exercise\b",
-    r"\bnever(?:ing)?\s+going\s+to\s+be\s+active\b",
-    r"\bwon'?t\s+ever\s+be\s+active\b",
-    r"\bwon'?t\s+ever\s+exercise\b",
-    r"\bwon'?t\s+ever\s+be\s+active\b",
-    r"\b(no\s+point|pointless|waste\s+of\s+time|not\s+worth\s+it|won'?t\s+help|nothing\s+will\s+change)\b",
-    r"\b(physical\s+active|physical\s+activity|being\s+active|exercise)\s+is\s+pointles\b",
-    r"\b(physical\s+activity|being\s+active|exercise)\s+seems\s+worthless\b",
-    r"\bpointles\s+to\s+(exercise|be\s+active|try)\b",
-    r"\bi\s+just\s+don'?t\s+have\s+it\s+in\s+me\b",
-    r"\bi'?m\s+done\s+trying\b",
-    r"\bi\s+can'?t\s+be\s+bothered\b",
-    r"\bi'?m\s+checked\s+out\b",
-    r"\btoo\s+old\s+to\s+(exercise|start)\b",
-    r"\bmy\s+body\s+can'?t\s+do\s+that\s+anymore\b",
-    r"\bthat\s+ship\s+has\s+sailed\b",
-    r"\bit'?s\s+too\s+late\s+for\s+me\b",
-    r"\bnothing\s+will\s+change\b",
-    r"\bit\s+won'?t\s+help\s+anyway\b",
-    r"\bi'?ll\s+never\s+stick\s+with\s+it\b",
-    r"\bi\s+always\s+quit\b",
-    r"\bi\s+can'?t\s+keep\s+it\s+up\b",
-    r"\b(worthless|useless)\s+(to|trying\s+to)?\s*(exercise|be\s+active)\b",
-    r"\bexercise\s+is\s+(useless|worthless)\b",
-    r"\b(waste|wasting)\s+of\s+time\b",
-    r"\bnot\s+worth\s+the\s+effort\b",
-    r"\bno\s+point\s+(in|to)\s+(exercise|being\s+active|trying)\b",
-    r"\bwhat'?s\s+the\s+point\s+of\s+(exercise|being\s+active)\b",
-    r"\bpointless\s+to\s+(exercise|try|be\s+active)\b",
-    r"\bit\s+won'?t\s+make\s+a\s+difference\b",
-    r"\bdoesn'?t\s+matter\s+if\s+i\s+exercise\b",
+GENERAL_DISINTEREST_PATTERNS: List[Pattern] = [
+    re.compile(r"\bi\s+don'?t\s+want\s+to\s+be\s+active\b", re.IGNORECASE),
+    re.compile(r"\bi\s+don'?t\s+want\s+to\s+exercise\b", re.IGNORECASE),
+    re.compile(r"\bi\s+don'?t\s+want\s+to\s+move\b", re.IGNORECASE),
+    re.compile(r"\bnot\s+interested\s+in\s+being\s+active\b", re.IGNORECASE),
+    re.compile(r"\bnot\s+interested\s+in\s+physical\s+activity\b", re.IGNORECASE),
+    re.compile(r"\bnot\s+interested\s+in\s+exercise\b", re.IGNORECASE),
+    re.compile(r"\bnever(?:ing)?\s+going\s+to\s+be\s+active\b", re.IGNORECASE),
+    re.compile(r"\bwon'?t\s+ever\s+be\s+active\b", re.IGNORECASE),
+    re.compile(r"\bwon'?t\s+ever\s+exercise\b", re.IGNORECASE),
+    re.compile(r"\b(no\s+point|pointless|waste\s+of\s+time|not\s+worth\s+it|won'?t\s+help|nothing\s+will\s+change)\b", re.IGNORECASE),
+    re.compile(r"\b(physical\s+active|physical\s+activity|being\s+active|exercise)\s+is\s+pointles\b", re.IGNORECASE),
+    re.compile(r"\b(physical\s+activity|being\s+active|exercise)\s+seems\s+worthless\b", re.IGNORECASE),
+    re.compile(r"\bpointles\s+to\s+(exercise|be\s+active|try)\b", re.IGNORECASE),
+    re.compile(r"\bi\s+just\s+don'?t\s+have\s+it\s+in\s+me\b", re.IGNORECASE),
+    re.compile(r"\bi'?m\s+done\s+trying\b", re.IGNORECASE),
+    re.compile(r"\bi\s+can'?t\s+be\s+bothered\b", re.IGNORECASE),
+    re.compile(r"\bi'?m\s+checked\s+out\b", re.IGNORECASE),
+    re.compile(r"\btoo\s+old\s+to\s+(exercise|start)\b", re.IGNORECASE),
+    re.compile(r"\bmy\s+body\s+can'?t\s+do\s+that\s+anymore\b", re.IGNORECASE),
+    re.compile(r"\bthat\s+ship\s+has\s+sailed\b", re.IGNORECASE),
+    re.compile(r"\bit'?s\s+too\s+late\s+for\s+me\b", re.IGNORECASE),
+    re.compile(r"\bnothing\s+will\s+change\b", re.IGNORECASE),
+    re.compile(r"\bit\s+won'?t\s+help\s+anyway\b", re.IGNORECASE),
+    re.compile(r"\bi'?ll\s+never\s+stick\s+with\s+it\b", re.IGNORECASE),
+    re.compile(r"\bi\s+always\s+quit\b", re.IGNORECASE),
+    re.compile(r"\bi\s+can'?t\s+keep\s+it\s+up\b", re.IGNORECASE),
+    re.compile(r"\b(worthless|useless)\s+(to|trying\s+to)?\s*(exercise|be\s+active)\b", re.IGNORECASE),
+    re.compile(r"\bexercise\s+is\s+(useless|worthless)\b", re.IGNORECASE),
+    re.compile(r"\b(waste|wasting)\s+of\s+time\b", re.IGNORECASE),
+    re.compile(r"\bnot\s+worth\s+the\s+effort\b", re.IGNORECASE),
+    re.compile(r"\bno\s+point\s+(in|to)\s+(exercise|being\s+active|trying)\b", re.IGNORECASE),
+    re.compile(r"\bwhat'?s\s+the\s+point\s+of\s+(exercise|being\s+active)\b", re.IGNORECASE),
+    re.compile(r"\bpointless\s+to\s+(exercise|try|be\s+active)\b", re.IGNORECASE),
+    re.compile(r"\bit\s+won'?t\s+make\s+a\s+difference\b", re.IGNORECASE),
+    re.compile(r"\bdoesn'?t\s+matter\s+if\s+i\s+exercise\b", re.IGNORECASE),
 ]
 
 ACTIVITY_CONTEXT_KEYWORDS = [
@@ -294,74 +304,76 @@ ACTIVITY_CONTEXT_KEYWORDS = [
     "fitness",
 ]
 
-EDUCATIONAL_REQUEST_PATTERNS = [
-    r"\bwhy (?:is|does)\b.*\b(physical activity|exercise|movement|being active)\b",
-    r"\bwhat is\b.*\b(physical activity|exercise|movement|being active)\b",
-    r"\bbenefits?\b.*\b(physical activity|exercise|movement|being active)\b",
-    r"\bhealth benefits?\b",
-    r"\bhow does\b.*\b(physical activity|exercise|movement|being active)\b",
-    r"\bexplain\b.*\b(physical activity|exercise|movement|being active)\b",
-    r"\bhelp me understand\b.*\b(physical activity|exercise|movement|being active)\b",
-    r"\bwhat happens if\b.*\b(not active|inactive|sedentary)\b",
-    r"\bevidence\b.*\b(physical activity|exercise|movement|being active)\b",
-    r"\bresearch\b.*\b(physical activity|exercise|movement|being active)\b",
-    r"\btell me about\b.*\b(physical activity|exercise|movement|being active)\b",
+# Patterns for detecting educational queries and user intent
+EDUCATIONAL_REQUEST_PATTERNS: List[Pattern] = [
+    re.compile(r"\bwhy (?:is|does)\b.*\b(physical activity|exercise|movement|being active)\b", re.IGNORECASE),
+    re.compile(r"\bwhat is\b.*\b(physical activity|exercise|movement|being active)\b", re.IGNORECASE),
+    re.compile(r"\bbenefits?\b.*\b(physical activity|exercise|movement|being active)\b", re.IGNORECASE),
+    re.compile(r"\bhealth benefits?\b", re.IGNORECASE),
+    re.compile(r"\bhow does\b.*\b(physical activity|exercise|movement|being active)\b", re.IGNORECASE),
+    re.compile(r"\bexplain\b.*\b(physical activity|exercise|movement|being active)\b", re.IGNORECASE),
+    re.compile(r"\bhelp me understand\b.*\b(physical activity|exercise|movement|being active)\b", re.IGNORECASE),
+    re.compile(r"\bwhat happens if\b.*\b(not active|inactive|sedentary)\b", re.IGNORECASE),
+    re.compile(r"\bevidence\b.*\b(physical activity|exercise|movement|being active)\b", re.IGNORECASE),
+    re.compile(r"\bresearch\b.*\b(physical activity|exercise|movement|being active)\b", re.IGNORECASE),
+    re.compile(r"\btell me about\b.*\b(physical activity|exercise|movement|being active)\b", re.IGNORECASE),
 ]
 
-MODULE_REQUEST_PATTERNS = [
-    r"\bmodule\b",
-    r"\blesson\s+\d+\b",
-    r"\bslide\s+\d+\b",
-    r"\bwhat does (?:the )?module say\b",
-    r"\bwhat does (?:the )?lesson say\b",
-    r"\bwhat does (?:the )?slide say\b",
+MODULE_REQUEST_PATTERNS: List[Pattern] = [
+    re.compile(r"\bmodule\b", re.IGNORECASE),
+    re.compile(r"\blesson\s+\d+\b", re.IGNORECASE),
+    re.compile(r"\bslide\s+\d+\b", re.IGNORECASE),
+    re.compile(r"\bwhat does (?:the )?module say\b", re.IGNORECASE),
+    re.compile(r"\bwhat does (?:the )?lesson say\b", re.IGNORECASE),
+    re.compile(r"\bwhat does (?:the )?slide say\b", re.IGNORECASE),
 ]
 
-LESSON_LOOKUP_PATTERNS = [
-    r"\bwhich lesson\b",
-    r"\bwhat lesson\b",
-    r"\bwhere in (?:the )?module\b",
-    r"\bwhere in (?:the )?lesson\b",
+LESSON_LOOKUP_PATTERNS: List[Pattern] = [
+    re.compile(r"\bwhich lesson\b", re.IGNORECASE),
+    re.compile(r"\bwhat lesson\b", re.IGNORECASE),
+    re.compile(r"\bwhere in (?:the )?module\b", re.IGNORECASE),
+    re.compile(r"\bwhere in (?:the )?lesson\b", re.IGNORECASE),
 ]
 
-
-EMOTION_STRONG_PATTERNS = [
-    r"\b(stress|stressed|stressful)\s+(about|around)\s+(exercise|activity|moving|movement|being active)\b",
-    r"\b(anxious|anxiety)\s+(about|around)\s+(exercise|activity|moving|movement|being active)\b",
-    r"\bdread(?:ing)?\s+(exercise|activity|moving|movement|being active)\b",
-    r"\bfeel\s+(guilty|ashamed|embarrassed)\s+about\s+(exercise|activity|being active)\b",
-    r"\bexercise\s+makes\s+me\s+(anxious|stressed|guilty|ashamed|embarrassed)\b",
+# Patterns for detecting emotional regulation needs
+EMOTION_STRONG_PATTERNS: List[Pattern] = [
+    re.compile(r"\b(stress|stressed|stressful)\s+(about|around)\s+(exercise|activity|moving|movement|being active)\b", re.IGNORECASE),
+    re.compile(r"\b(anxious|anxiety)\s+(about|around)\s+(exercise|activity|moving|movement|being active)\b", re.IGNORECASE),
+    re.compile(r"\bdread(?:ing)?\s+(exercise|activity|moving|movement|being active)\b", re.IGNORECASE),
+    re.compile(r"\bfeel\s+(guilty|ashamed|embarrassed)\s+about\s+(exercise|activity|being active)\b", re.IGNORECASE),
+    re.compile(r"\bexercise\s+makes\s+me\s+(anxious|stressed|guilty|ashamed|embarrassed)\b", re.IGNORECASE),
 ]
 
-EMOTION_WEAK_PATTERNS = [
-    r"\b(stress|stressed|stressful)\b",
-    r"\banxious\b",
-    r"\banxiety\b",
-    r"\bdread\b",
-    r"\bguilty\b",
-    r"\bshame\b",
-    r"\bashamed\b",
-    r"\bfrustrated\b",
-    r"\bfrustration\b",
-    r"\boverwhelmed\b",
-    r"\bembarrassed\b",
-    r"\bself-conscious\b",
+EMOTION_WEAK_PATTERNS: List[Pattern] = [
+    re.compile(r"\b(stress|stressed|stressful)\b", re.IGNORECASE),
+    re.compile(r"\banxious\b", re.IGNORECASE),
+    re.compile(r"\banxiety\b", re.IGNORECASE),
+    re.compile(r"\bdread\b", re.IGNORECASE),
+    re.compile(r"\bguilty\b", re.IGNORECASE),
+    re.compile(r"\bshame\b", re.IGNORECASE),
+    re.compile(r"\bashamed\b", re.IGNORECASE),
+    re.compile(r"\bfrustrated\b", re.IGNORECASE),
+    re.compile(r"\bfrustration\b", re.IGNORECASE),
+    re.compile(r"\boverwhelmed\b", re.IGNORECASE),
+    re.compile(r"\bembarrassed\b", re.IGNORECASE),
+    re.compile(r"\bself-conscious\b", re.IGNORECASE),
 ]
 
-ACTION_SUGGESTION_PATTERNS = [
-    r"\btry\b",
-    r"\bstart (?:with|by)\b",
-    r"\bconsider\b",
-    r"\bexplore\b",
-    r"\bhow about\b",
-    r"\byou could\b",
-    r"\byou might\b",
-    r"\bwould you\b",
-    r"\bif you(?:'re| are)?\s+open\b",
-    r"\bif you want to\b",
-    r"\bfind movement\b",
-    r"\bif you ever\b",
-    r"\bif you decide to\b",
+# Patterns for filtering action suggestions from educational responses
+ACTION_SUGGESTION_PATTERNS: List[Pattern] = [
+    re.compile(r"\btry\b", re.IGNORECASE),
+    re.compile(r"\bstart (?:with|by)\b", re.IGNORECASE),
+    re.compile(r"\bconsider\b", re.IGNORECASE),
+    re.compile(r"\bexplore\b", re.IGNORECASE),
+    re.compile(r"\bhow about\b", re.IGNORECASE),
+    re.compile(r"\byou could\b", re.IGNORECASE),
+    re.compile(r"\byou might\b", re.IGNORECASE),
+    re.compile(r"\bwould you\b", re.IGNORECASE),
+    re.compile(r"\bif you(?:'re| are)?\s+open\b", re.IGNORECASE),
+    re.compile(r"\bif you want to\b", re.IGNORECASE),
+    re.compile(r"\bfind movement\b", re.IGNORECASE),
+    re.compile(r"\bif you ever\b", re.IGNORECASE),
+    re.compile(r"\bif you decide to\b", re.IGNORECASE),
 ]
 
 REFERENCE_MIN_SCORE = 0.68
@@ -384,8 +396,9 @@ KNOWN_ACTIVITY_HUBS = [
 ]
 
 
-def _contains_patterns(text: str, patterns: List[str]) -> bool:
-    return any(re.search(pattern, text, flags=re.IGNORECASE) for pattern in patterns)
+def _contains_patterns(text: str, patterns: List[Pattern]) -> bool:
+    """Check if text matches any of the compiled regex patterns."""
+    return any(pattern.search(text) for pattern in patterns)
 
 
 def _contains_keywords(text: str, keywords: List[str]) -> bool:
@@ -449,7 +462,16 @@ def detect_sources_only(text: str) -> bool:
 
 
 def infer_process_layer(text: str) -> LayerInference:
-    """Infer which M-PAC layer (reflective, regulatory, reflexive) is most active."""
+    """
+    Infer which M-PAC layer (reflective, regulatory, reflexive) is most active.
+
+    M-PAC is a motivational framework with three layers:
+    - Reflexive: Automatic habits (frequency + routine language)
+    - Regulatory: Planning/execution (frequency without routine)
+    - Reflective: Thinking/considering (feelings, opportunities, planning)
+
+    Returns inference with confidence score based on signal strength.
+    """
 
     lowered = text.lower()
     signals = LayerSignals(
@@ -717,7 +739,62 @@ class CoachAgent:
         self.latest_retrieval: Optional[RetrievalResult] = None
         self.last_retrieval_with_results: Optional[RetrievalResult] = None
 
+    def _validate_input(self, user_input: str) -> None:
+        """
+        Validate user input for security concerns.
+
+        This performs basic sanity checks on user input:
+        - Ensures input is not empty
+        - Enforces maximum length to prevent memory exhaustion
+        - Detects obvious prompt injection attempts (logged but not blocked)
+
+        Args:
+            user_input: User message text
+
+        Raises:
+            ValueError: If input fails validation
+        """
+        if not user_input or not user_input.strip():
+            raise ValueError("Input cannot be empty")
+
+        if len(user_input) > MAX_INPUT_LENGTH:
+            logger.warning(f"Input too long: {len(user_input)} chars (max: {MAX_INPUT_LENGTH})")
+            raise ValueError(f"Input too long. Maximum {MAX_INPUT_LENGTH} characters allowed.")
+
+        # Basic prompt injection detection - compiled at function level for thread safety
+        # These patterns detect attempts to manipulate the system prompt
+        dangerous_patterns: List[Pattern] = [
+            re.compile(r"ignore\s+(?:all\s+)?(?:previous|above|prior)\s+(?:instructions|prompts?|commands?)", re.IGNORECASE),
+            re.compile(r"disregard\s+(?:all\s+)?(?:previous|above|prior)\s+(?:instructions|prompts?)", re.IGNORECASE),
+            re.compile(r"new\s+instructions?:", re.IGNORECASE),
+            re.compile(r"system\s+prompt:", re.IGNORECASE),
+            re.compile(r"you\s+are\s+now\s+(?:a|an)", re.IGNORECASE),
+            re.compile(r"\[SYSTEM\]", re.IGNORECASE),
+            re.compile(r"\[ADMIN\]", re.IGNORECASE),
+        ]
+
+        for pattern in dangerous_patterns:
+            if pattern.search(user_input):
+                logger.warning(f"Potential prompt injection detected: {pattern.pattern}")
+                # Don't reject - just log and continue
+                # The system prompt includes instructions to resist manipulation
+                break
+
+    def _truncate_history(self) -> None:
+        """
+        Truncate conversation history to prevent memory exhaustion.
+
+        Keeps the most recent MAX_HISTORY_MESSAGES messages.
+        """
+        if len(self.history) > MAX_HISTORY_MESSAGES:
+            messages_to_remove = len(self.history) - MAX_HISTORY_MESSAGES
+            logger.info(f"Truncating history: removing {messages_to_remove} oldest messages")
+            self.history = self.history[-MAX_HISTORY_MESSAGES:]
+
     def generate_response(self, user_input: str) -> str:
+        # Validate input first
+        self._validate_input(user_input)
+
         prepared = self._prepare_prompt(user_input)
         if prepared.override_citations:
             assistant_reply = prepared.override_text
@@ -743,6 +820,9 @@ class CoachAgent:
         return assistant_reply
 
     def stream_response(self, user_input: str) -> Generator[str, None, str]:
+        # Validate input first
+        self._validate_input(user_input)
+
         prepared = self._prepare_prompt(user_input)
         if prepared.override_citations:
             reply = prepared.override_text
@@ -830,6 +910,12 @@ class CoachAgent:
             decision=decision,
         )
 
+        # Response mode routing determines coaching approach based on user state
+        # - lowest_mpac: Educational only, no action suggestions (unmotivated users)
+        # - emotion_education: Educational support for negative feelings
+        # - educational: Info-focused responses for explicit knowledge requests
+        # - source_request: Concise response with citations
+        # - default: Standard conversational coaching
         response_mode = "default"
         response_instruction: Optional[str] = None
         if lowest_mpac:
@@ -971,8 +1057,18 @@ class CoachAgent:
         return self._append_reference_block(text, prepared.reference_block_references, max_refs=max_refs)
 
     def _record_exchange(self, user_input: str, assistant_reply: str) -> None:
+        """
+        Record conversation exchange and truncate history if needed.
+
+        Args:
+            user_input: User's message
+            assistant_reply: Assistant's response
+        """
         self.history.append({"role": "user", "content": user_input})
         self.history.append({"role": "assistant", "content": assistant_reply})
+
+        # Truncate history to prevent unbounded growth
+        self._truncate_history()
 
     def _build_messages(
         self,
@@ -1033,6 +1129,13 @@ class CoachAgent:
         prefer_early_lessons: bool,
         pool_limit: int = REFERENCE_POOL_SIZE,
     ) -> List[RetrievedChunk]:
+        """
+        Select most relevant lesson chunks for citation.
+
+        When prefer_early_lessons is True (for lowest-MPAC users), prioritizes
+        foundational content (Lessons 1-2) over higher-ranked later lessons,
+        unless the later lesson significantly outscores early content.
+        """
         if not retrieval or not retrieval.master_chunks or max_refs <= 0:
             return []
         chunks = list(retrieval.master_chunks)

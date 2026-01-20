@@ -1,7 +1,10 @@
-"""Runtime retrieval helpers that connect to Qdrant via LlamaIndex."""
+"""Runtime retrieval helpers that connect to Qdrant via LlamaIndex with content sanitization."""
 
 from __future__ import annotations
 
+import html
+import re
+import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -14,8 +17,19 @@ from qdrant_client import QdrantClient
 from rag.config import RagConfig
 from rag.router import ActivityFilters, RouteDecision
 
+logger = logging.getLogger(__name__)
+
 
 def _node_content(node: Any) -> str:
+    """
+    Extract text content from a node.
+
+    Args:
+        node: LlamaIndex node object
+
+    Returns:
+        Text content
+    """
     if hasattr(node, "get_content"):
         try:
             return node.get_content(metadata_mode="all")
@@ -24,8 +38,50 @@ def _node_content(node: Any) -> str:
     return getattr(node, "text", "")
 
 
+def _sanitize_text(text: str) -> str:
+    """
+    Sanitize retrieved text to prevent injection attacks.
+
+    This is a defense-in-depth measure. Retrieved content should be trusted,
+    but we sanitize to prevent:
+    - HTML/script injection if content is ever displayed in a web context
+    - Control characters that could interfere with the LLM prompt
+    - Excessive whitespace or formatting issues
+
+    Args:
+        text: Raw text from vector store
+
+    Returns:
+        Sanitized text
+    """
+    if not text:
+        return ""
+
+    # Remove control characters (except newlines and tabs)
+    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', text)
+
+    # Escape HTML entities (if content ever displayed in web UI)
+    text = html.escape(text, quote=False)
+
+    # Normalize whitespace
+    text = re.sub(r'\s+', ' ', text)
+    text = text.strip()
+
+    return text
+
+
 def _truncate(text: str, limit: int = 1200) -> str:
-    cleaned = text.strip()
+    """
+    Truncate text to a maximum length with sanitization.
+
+    Args:
+        text: Text to truncate
+        limit: Maximum length
+
+    Returns:
+        Truncated and sanitized text
+    """
+    cleaned = _sanitize_text(text)
     if len(cleaned) <= limit:
         return cleaned
     return f"{cleaned[:limit].rstrip()}..."

@@ -5,7 +5,7 @@ from __future__ import annotations
 from openai import OpenAI
 
 DEFAULT_TTS_MODEL = "gpt-4o-mini-tts"
-DEFAULT_VOICE = "alloy"
+DEFAULT_VOICE = "nova"
 DEFAULT_RESPONSE_FORMAT = "mp3"
 
 _MIME_BY_FORMAT = {

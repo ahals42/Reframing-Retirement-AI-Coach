@@ -13,8 +13,13 @@ let mediaRecorder = null;
 let mediaStream = null;
 let recordedChunks = [];
 let isRecording = false;
-let recordIntent = false;
 let activeAudio = null;
+let silenceTimeout = null;
+let audioContext = null;
+let analyser = null;
+let silenceStart = null;
+const SILENCE_THRESHOLD = 0.01; // Adjust based on testing
+const SILENCE_DURATION = 3000; // 3 seconds of silence
 
 init();
 setupVoiceControls();
@@ -69,42 +74,33 @@ function setupVoiceControls() {
     return;
   }
 
-  micButton.addEventListener("pointerdown", (event) => {
+  // Click to toggle recording (start/stop)
+  micButton.addEventListener("click", (event) => {
     event.preventDefault();
-    micButton.setPointerCapture(event.pointerId);
-    recordIntent = true;
-    startRecording();
-  });
-  micButton.addEventListener("pointerup", () => {
-    recordIntent = false;
-    stopRecording();
-  });
-  micButton.addEventListener("pointerleave", () => {
-    recordIntent = false;
-    stopRecording();
-  });
-  micButton.addEventListener("pointercancel", () => {
-    recordIntent = false;
-    stopRecording();
-  });
-  micButton.addEventListener("keydown", (event) => {
-    if (event.code === "Space" || event.code === "Enter") {
-      event.preventDefault();
-      recordIntent = true;
+    if (isRecording) {
+      stopRecording();
+    } else {
       startRecording();
     }
   });
-  micButton.addEventListener("keyup", (event) => {
+
+  // Also support keyboard
+  micButton.addEventListener("keydown", (event) => {
     if (event.code === "Space" || event.code === "Enter") {
       event.preventDefault();
-      recordIntent = false;
-      stopRecording();
+      if (isRecording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
     }
   });
 
+  // Stop recording if window loses focus
   window.addEventListener("blur", () => {
-    recordIntent = false;
-    stopRecording();
+    if (isRecording) {
+      stopRecording();
+    }
   });
 }
 
@@ -116,7 +112,7 @@ async function startRecording() {
   try {
     mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch (err) {
-    appendBotBubble("Something went wrong. Please try again.");
+    appendBotBubble("Microphone access denied. Please allow microphone access and try again.");
     return;
   }
 
@@ -141,6 +137,7 @@ async function startRecording() {
 
   mediaRecorder.addEventListener("stop", async () => {
     stopMediaTracks();
+    stopSilenceDetection();
     isRecording = false;
     setMicButtonState(false);
 
@@ -157,9 +154,8 @@ async function startRecording() {
   isRecording = true;
   setMicButtonState(true);
 
-  if (!recordIntent) {
-    stopRecording();
-  }
+  // Start silence detection
+  startSilenceDetection();
 }
 
 function stopRecording() {
@@ -177,6 +173,74 @@ function stopMediaTracks() {
   }
   mediaStream.getTracks().forEach((track) => track.stop());
   mediaStream = null;
+}
+
+function startSilenceDetection() {
+  if (!mediaStream) {
+    return;
+  }
+
+  try {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioContext.createAnalyser();
+    const source = audioContext.createMediaStreamSource(mediaStream);
+    source.connect(analyser);
+    analyser.fftSize = 2048;
+
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    function checkAudioLevel() {
+      if (!isRecording) {
+        return;
+      }
+
+      analyser.getByteTimeDomainData(dataArray);
+
+      // Calculate RMS (root mean square) to detect audio level
+      let sum = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        const normalized = (dataArray[i] - 128) / 128;
+        sum += normalized * normalized;
+      }
+      const rms = Math.sqrt(sum / bufferLength);
+
+      if (rms < SILENCE_THRESHOLD) {
+        // Silence detected
+        if (silenceStart === null) {
+          silenceStart = Date.now();
+        } else if (Date.now() - silenceStart >= SILENCE_DURATION) {
+          // 3 seconds of silence, stop recording
+          stopRecording();
+          return;
+        }
+      } else {
+        // Sound detected, reset silence timer
+        silenceStart = null;
+      }
+
+      // Check again in 100ms
+      silenceTimeout = setTimeout(checkAudioLevel, 100);
+    }
+
+    checkAudioLevel();
+  } catch (err) {
+    console.error("Failed to start silence detection:", err);
+  }
+}
+
+function stopSilenceDetection() {
+  if (silenceTimeout) {
+    clearTimeout(silenceTimeout);
+    silenceTimeout = null;
+  }
+  silenceStart = null;
+
+  if (audioContext) {
+    audioContext.close();
+    audioContext = null;
+  }
+  analyser = null;
 }
 
 function pickSupportedMimeType() {
@@ -198,7 +262,7 @@ function setMicButtonState(recording) {
   }
   micButton.classList.toggle("recording", recording);
   micButton.setAttribute("aria-pressed", recording ? "true" : "false");
-  setMicButtonLabel(recording ? "Release to send" : "Hold to talk");
+  setMicButtonLabel(recording ? "Click to stop" : "Click to talk");
 }
 
 function setMicButtonLabel(text) {
@@ -220,7 +284,28 @@ async function sendVoiceMessage(audioBlob) {
 
     const formData = new FormData();
     const extension = guessExtension(audioBlob.type);
-    formData.append("audio", audioBlob, `voice-input.${extension}`);
+    const filename = `voice-input.${extension}`;
+
+    // Normalize MIME type to match backend validation
+    let normalizedMimeType = audioBlob.type;
+    if (normalizedMimeType && normalizedMimeType.includes(";")) {
+      // Remove codec info (e.g., "audio/webm;codecs=opus" -> "audio/webm")
+      normalizedMimeType = normalizedMimeType.split(";")[0];
+    }
+    if (!normalizedMimeType) {
+      normalizedMimeType = "audio/webm"; // Default
+    }
+
+    console.log("Sending voice message:", {
+      blobSize: audioBlob.size,
+      originalBlobType: audioBlob.type,
+      normalizedMimeType: normalizedMimeType,
+      filename: filename
+    });
+
+    // Create a new blob with normalized MIME type
+    const normalizedBlob = new Blob([audioBlob], { type: normalizedMimeType });
+    formData.append("audio", normalizedBlob, filename);
 
     const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/voice-chat`, {
       method: "POST",
@@ -228,7 +313,9 @@ async function sendVoiceMessage(audioBlob) {
     });
 
     if (!response.ok) {
-      throw new Error("The coach is unavailable right now.");
+      const errorText = await response.text();
+      console.error("Voice chat error:", response.status, errorText);
+      throw new Error(`Voice chat failed: ${errorText || "The coach is unavailable right now."}`);
     }
 
     const data = await response.json();

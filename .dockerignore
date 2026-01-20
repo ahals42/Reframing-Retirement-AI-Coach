@@ -1,0 +1,60 @@
+# Exclude sensitive files and secrets from Docker builds
+.env
+.env.*
+!.env.example
+
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Python cache and compiled files
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+.eggs
+
+# Testing and coverage
+.pytest_cache
+.coverage
+htmlcov
+.tox
+.nox
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Development and testing
+tests/
+.editorconfig
+Makefile
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# Local development files
+docker-compose.override.yml
+*.log
+
+# Frontend dev-only files (local testing)
+frontend/index.dev.html
+frontend/dev-auth.js
