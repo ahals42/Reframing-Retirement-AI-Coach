@@ -81,10 +81,9 @@ logger.info("Application initialized successfully")
 
 
 @app.get("/healthz")
-@require_api_key
-async def health_check(request: Request) -> dict:
+async def health_check() -> dict:
     """
-    Health check endpoint with authentication.
+    Health check endpoint (no authentication required for Docker healthcheck).
     Returns basic application status.
     """
     return {
