@@ -155,16 +155,9 @@ async function startRecording() {
     return;
   }
 
-  // Show visual feedback immediately (before waiting for mic permission)
-  showRecordingIndicator();
-  setMicButtonState(true);
-
   try {
     mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch (err) {
-    // Hide indicator if mic access denied
-    hideRecordingIndicator();
-    setMicButtonState(false);
     appendBotBubble("Microphone access denied. Please allow microphone access and try again.");
     return;
   }
@@ -178,8 +171,6 @@ async function startRecording() {
       : new MediaRecorder(mediaStream);
   } catch (err) {
     stopMediaTracks();
-    hideRecordingIndicator();
-    setMicButtonState(false);
     appendBotBubble("Something went wrong. Please try again.");
     return;
   }
@@ -209,6 +200,8 @@ async function startRecording() {
   mediaRecorder.start();
   isRecording = true;
   recordingStartTime = Date.now();
+  setMicButtonState(true);
+  showRecordingIndicator();
 
   // Start silence detection
   startSilenceDetection();
@@ -421,7 +414,8 @@ async function sendVoiceMessage(audioBlob) {
     }
 
     appendBotBubble(data.reply_text || "I didn't catch that. Could you please try again?");
-    playReplyAudio(data.reply_audio, data.reply_audio_mime);
+    // Wait for audio to finish before re-enabling input
+    await playReplyAudio(data.reply_audio, data.reply_audio_mime);
   } catch (err) {
     appendBotBubble(err.message || "I didn't catch that. Could you please try again?");
   } finally {
@@ -465,17 +459,34 @@ function guessExtension(mimeType) {
 }
 
 function playReplyAudio(base64Audio, mimeType) {
-  if (!base64Audio) {
-    return;
-  }
-  if (activeAudio) {
-    activeAudio.pause();
-    activeAudio = null;
-  }
-  const source = `data:${mimeType || "audio/mpeg"};base64,${base64Audio}`;
-  const audio = new Audio(source);
-  activeAudio = audio;
-  audio.play().catch(() => {});
+  return new Promise((resolve) => {
+    if (!base64Audio) {
+      resolve();
+      return;
+    }
+    if (activeAudio) {
+      activeAudio.pause();
+      activeAudio = null;
+    }
+    const source = `data:${mimeType || "audio/mpeg"};base64,${base64Audio}`;
+    const audio = new Audio(source);
+    activeAudio = audio;
+
+    // Resolve when audio ends or errors
+    audio.addEventListener("ended", () => {
+      activeAudio = null;
+      resolve();
+    });
+    audio.addEventListener("error", () => {
+      activeAudio = null;
+      resolve();
+    });
+
+    audio.play().catch(() => {
+      activeAudio = null;
+      resolve();
+    });
+  });
 }
 
 async function streamAssistantResponse(text) {
