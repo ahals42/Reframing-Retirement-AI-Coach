@@ -20,9 +20,9 @@ let audioContext = null;
 let analyser = null;
 let silenceStart = null;
 let recordingStartTime = null;
-const SILENCE_THRESHOLD = 0.005; // Lower = more sensitive to quiet sounds
-const SILENCE_DURATION = 3000; // 3 seconds of silence
-const MIN_RECORDING_TIME = 1500; // Minimum 1.5 seconds before silence detection kicks in
+const SILENCE_THRESHOLD = 0.002; // Lower = more sensitive to quiet sounds
+const SILENCE_DURATION = 4000; // 4 seconds of silence before auto-stop
+const MIN_RECORDING_TIME = 2000; // Minimum 2 seconds before silence detection kicks in
 
 init();
 setupVoiceControls();
