@@ -14,6 +14,7 @@ let mediaRecorder = null;
 let mediaStream = null;
 let recordedChunks = [];
 let isRecording = false;
+let isProcessing = false; // Track when bot is responding
 let activeAudio = null;
 let silenceTimeout = null;
 let audioContext = null;
@@ -85,6 +86,7 @@ async function createSession() {
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (isProcessing) return; // Block while bot is responding
   const text = messageInput.value.trim();
   if (!text) {
     return;
@@ -119,6 +121,7 @@ function setupVoiceControls() {
   // Click to toggle recording (start/stop)
   micButton.addEventListener("click", (event) => {
     event.preventDefault();
+    if (isProcessing) return; // Block while bot is responding
     if (isRecording) {
       stopRecording();
     } else {
@@ -130,6 +133,7 @@ function setupVoiceControls() {
   micButton.addEventListener("keydown", (event) => {
     if (event.code === "Space" || event.code === "Enter") {
       event.preventDefault();
+      if (isProcessing) return; // Block while bot is responding
       if (isRecording) {
         stopRecording();
       } else {
@@ -147,7 +151,7 @@ function setupVoiceControls() {
 }
 
 async function startRecording() {
-  if (isRecording) {
+  if (isRecording || isProcessing) {
     return;
   }
 
@@ -182,6 +186,7 @@ async function startRecording() {
     stopSilenceDetection();
     isRecording = false;
     setMicButtonState(false);
+    hideRecordingIndicator();
 
     if (!recordedChunks.length) {
       return;
@@ -196,6 +201,7 @@ async function startRecording() {
   isRecording = true;
   recordingStartTime = Date.now();
   setMicButtonState(true);
+  showRecordingIndicator();
 
   // Start silence detection
   startSilenceDetection();
@@ -260,7 +266,7 @@ function startSilenceDetection() {
         if (silenceStart === null) {
           silenceStart = Date.now();
         } else if (Date.now() - silenceStart >= SILENCE_DURATION) {
-          // 3 seconds of silence, stop recording
+          // 4 seconds of silence, stop recording
           stopRecording();
           return;
         }
@@ -312,7 +318,7 @@ function setMicButtonState(recording) {
   }
   micButton.classList.toggle("recording", recording);
   micButton.setAttribute("aria-pressed", recording ? "true" : "false");
-  setMicButtonLabel(recording ? "Click to stop" : "Click to talk");
+  setMicButtonLabel(recording ? "Recording... Click to stop" : "Click to talk");
 }
 
 function setMicButtonLabel(text) {
@@ -324,8 +330,36 @@ function setMicButtonLabel(text) {
   }
 }
 
+// Recording indicator functions
+function showRecordingIndicator() {
+  // Add visual pulse to mic button
+  if (micButton) {
+    micButton.classList.add("recording-pulse");
+  }
+  // Show recording status in chat
+  const indicator = document.createElement("div");
+  indicator.id = "recording-indicator";
+  indicator.className = "recording-status";
+  indicator.innerHTML = '<span class="recording-dot"></span> Listening...';
+  chatWindow.appendChild(indicator);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+function hideRecordingIndicator() {
+  if (micButton) {
+    micButton.classList.remove("recording-pulse");
+  }
+  const indicator = document.getElementById("recording-indicator");
+  if (indicator) {
+    indicator.remove();
+  }
+}
+
 async function sendVoiceMessage(audioBlob) {
+  isProcessing = true;
+  setInputDisabledState(true);
   showTyping();
+
   try {
     if (!sessionId) {
       sessionId = await createSession();
@@ -366,20 +400,44 @@ async function sendVoiceMessage(audioBlob) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Voice chat error:", response.status, errorText);
-      throw new Error(`Voice chat failed: ${errorText || "The coach is unavailable right now."}`);
+      // Friendly error message instead of technical one
+      throw new Error("I didn't catch that. Could you please try again?");
     }
 
     const data = await response.json();
     if (data.transcript) {
       appendUserBubble(data.transcript);
+    } else {
+      // No transcript means speech wasn't recognized
+      appendBotBubble("I didn't catch that. Could you please try again?");
+      return;
     }
 
-    appendBotBubble(data.reply_text || "Something went wrong.");
+    appendBotBubble(data.reply_text || "I didn't catch that. Could you please try again?");
     playReplyAudio(data.reply_audio, data.reply_audio_mime);
   } catch (err) {
-    appendBotBubble(err.message || "Something went wrong.");
+    appendBotBubble(err.message || "I didn't catch that. Could you please try again?");
   } finally {
     hideTyping();
+    isProcessing = false;
+    setInputDisabledState(false);
+  }
+}
+
+function setInputDisabledState(disabled) {
+  if (messageInput) {
+    messageInput.disabled = disabled;
+  }
+  if (micButton) {
+    micButton.disabled = disabled;
+    if (disabled) {
+      micButton.classList.add("disabled");
+    } else {
+      micButton.classList.remove("disabled");
+    }
+  }
+  if (form) {
+    form.style.opacity = disabled ? "0.6" : "1";
   }
 }
 
@@ -414,8 +472,11 @@ function playReplyAudio(base64Audio, mimeType) {
 }
 
 async function streamAssistantResponse(text) {
+  isProcessing = true;
+  setInputDisabledState(true);
   showTyping();
   const botBubble = appendBotBubble("");
+
   try {
     const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/messages`, {
       method: "POST",
@@ -462,6 +523,8 @@ async function streamAssistantResponse(text) {
     botBubble.textContent = err.message || "Something went wrong.";
   } finally {
     hideTyping();
+    isProcessing = false;
+    setInputDisabledState(false);
   }
 }
 
