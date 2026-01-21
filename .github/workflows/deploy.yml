@@ -1,0 +1,39 @@
+name: Deploy to AWS Lightsail
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Lightsail
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ${{ secrets.LIGHTSAIL_USER }}
+          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          port: 22
+          script: |
+            cd /home/ubuntu/Reframing-Retirement-AI-Coach
+
+            # Pull latest changes from GitHub
+            git fetch origin main
+            git reset --hard origin/main
+
+            # Rebuild and restart Docker containers
+            docker compose down
+            docker compose build --no-cache
+            docker compose up -d
+
+            # Clean up old Docker images to save space
+            docker image prune -f
+
+            # Show container status
+            docker compose ps
