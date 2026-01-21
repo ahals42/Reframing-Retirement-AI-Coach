@@ -19,8 +19,10 @@ let silenceTimeout = null;
 let audioContext = null;
 let analyser = null;
 let silenceStart = null;
-const SILENCE_THRESHOLD = 0.01; // Adjust based on testing
+let recordingStartTime = null;
+const SILENCE_THRESHOLD = 0.005; // Lower = more sensitive to quiet sounds
 const SILENCE_DURATION = 3000; // 3 seconds of silence
+const MIN_RECORDING_TIME = 1500; // Minimum 1.5 seconds before silence detection kicks in
 
 init();
 setupVoiceControls();
@@ -192,6 +194,7 @@ async function startRecording() {
 
   mediaRecorder.start();
   isRecording = true;
+  recordingStartTime = Date.now();
   setMicButtonState(true);
 
   // Start silence detection
@@ -232,6 +235,13 @@ function startSilenceDetection() {
 
     function checkAudioLevel() {
       if (!isRecording) {
+        return;
+      }
+
+      // Don't check for silence until minimum recording time has passed
+      const recordingTime = Date.now() - recordingStartTime;
+      if (recordingTime < MIN_RECORDING_TIME) {
+        silenceTimeout = setTimeout(checkAudioLevel, 100);
         return;
       }
 
