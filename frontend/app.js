@@ -155,9 +155,16 @@ async function startRecording() {
     return;
   }
 
+  // Show visual feedback immediately (before waiting for mic permission)
+  showRecordingIndicator();
+  setMicButtonState(true);
+
   try {
     mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch (err) {
+    // Hide indicator if mic access denied
+    hideRecordingIndicator();
+    setMicButtonState(false);
     appendBotBubble("Microphone access denied. Please allow microphone access and try again.");
     return;
   }
@@ -171,6 +178,8 @@ async function startRecording() {
       : new MediaRecorder(mediaStream);
   } catch (err) {
     stopMediaTracks();
+    hideRecordingIndicator();
+    setMicButtonState(false);
     appendBotBubble("Something went wrong. Please try again.");
     return;
   }
@@ -200,8 +209,6 @@ async function startRecording() {
   mediaRecorder.start();
   isRecording = true;
   recordingStartTime = Date.now();
-  setMicButtonState(true);
-  showRecordingIndicator();
 
   // Start silence detection
   startSilenceDetection();
