@@ -8,9 +8,11 @@ import logging
 from typing import Iterator
 
 from dotenv import load_dotenv
+from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from openai import OpenAI
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -181,3 +183,25 @@ async def stream_message(request: Request, session_id: str, payload: MessageRequ
 def _as_event(event_type: str, payload: dict) -> str:
     payload = {"type": event_type, **payload}
     return json.dumps(payload) + "\n"
+
+
+# Serve frontend static files
+# Determine frontend path (works both locally and in Docker)
+frontend_path = Path(__file__).parent.parent / "frontend"
+if frontend_path.exists():
+    # Serve static files (CSS, JS, images)
+    app.mount("/static", StaticFiles(directory=frontend_path), name="static")
+
+    @app.get("/")
+    async def serve_index():
+        """Serve the main frontend page."""
+        return FileResponse(frontend_path / "index.html")
+
+    @app.get("/{filename:path}")
+    async def serve_static(filename: str):
+        """Serve static files from frontend directory."""
+        file_path = frontend_path / filename
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(file_path)
+        # Return index.html for SPA routing
+        return FileResponse(frontend_path / "index.html")
