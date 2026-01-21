@@ -1,4 +1,4 @@
-const API_BASE_URL = window.API_BASE_URL ?? "http://localhost:8000";
+const API_BASE_URL = window.API_BASE_URL ?? "";
 
 const chatWindow = document.getElementById("chat");
 const form = document.getElementById("chat-form");
@@ -8,6 +8,7 @@ const micLabel = document.getElementById("mic-label");
 const resetButton = document.getElementById("reset-session");
 
 let sessionId = null;
+let apiKey = null;
 let typingNode = null;
 let mediaRecorder = null;
 let mediaStream = null;
@@ -25,18 +26,54 @@ init();
 setupVoiceControls();
 
 async function init() {
+  // Check for stored API key or prompt for one
+  apiKey = sessionStorage.getItem("rr-api-key");
+  if (!apiKey) {
+    apiKey = await promptForApiKey();
+    if (!apiKey) {
+      appendBotBubble("An access key is required to use the coach. Please refresh the page and enter your key.");
+      disableInput();
+      return;
+    }
+    sessionStorage.setItem("rr-api-key", apiKey);
+  }
+
   sessionId = sessionStorage.getItem("rr-session");
   if (!sessionId) {
-    sessionId = await createSession();
-    sessionStorage.setItem("rr-session", sessionId);
+    try {
+      sessionId = await createSession();
+      sessionStorage.setItem("rr-session", sessionId);
+    } catch (err) {
+      // Invalid API key - clear it and prompt again
+      sessionStorage.removeItem("rr-api-key");
+      appendBotBubble("Invalid access key. Please refresh the page and try again.");
+      disableInput();
+      return;
+    }
   }
   appendBotBubble(
     "Hi! What would you like to talk about today when it comes to physical activity?"
   );
 }
 
+function promptForApiKey() {
+  return new Promise((resolve) => {
+    const key = prompt("Please enter your access key to use the Reframing Retirement Coach:");
+    resolve(key ? key.trim() : null);
+  });
+}
+
+function disableInput() {
+  if (messageInput) messageInput.disabled = true;
+  if (micButton) micButton.disabled = true;
+  if (form) form.style.opacity = "0.5";
+}
+
 async function createSession() {
-  const res = await fetch(`${API_BASE_URL}/sessions`, { method: "POST" });
+  const res = await fetch(`${API_BASE_URL}/sessions`, {
+    method: "POST",
+    headers: { "X-API-Key": apiKey }
+  });
   if (!res.ok) {
     throw new Error("Unable to start a session.");
   }
@@ -57,7 +94,10 @@ form.addEventListener("submit", async (event) => {
 
 resetButton.addEventListener("click", async () => {
   if (sessionId) {
-    await fetch(`${API_BASE_URL}/sessions/${sessionId}`, { method: "DELETE" });
+    await fetch(`${API_BASE_URL}/sessions/${sessionId}`, {
+      method: "DELETE",
+      headers: { "X-API-Key": apiKey }
+    });
   }
   sessionStorage.removeItem("rr-session");
   clearChat();
@@ -309,6 +349,7 @@ async function sendVoiceMessage(audioBlob) {
 
     const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/voice-chat`, {
       method: "POST",
+      headers: { "X-API-Key": apiKey },
       body: formData,
     });
 
@@ -368,7 +409,10 @@ async function streamAssistantResponse(text) {
   try {
     const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/messages`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": apiKey
+      },
       body: JSON.stringify({ text }),
     });
     if (!response.ok || !response.body) {
