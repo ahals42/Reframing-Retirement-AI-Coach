@@ -37,3 +37,6 @@ docker-compose.override.yml
 # Local-only frontend dev helpers (do not commit)
 frontend/index.dev.html
 frontend/dev-auth.js
+
+# Local-only documentation (AI guides, security docs)
+docs/refs/

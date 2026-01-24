@@ -48,7 +48,9 @@ def _ensure_collection(client: QdrantClient, name: str, vector_size: int) -> Non
     logger.info("Creating collection %s (size=%s)", name, vector_size)
     client.recreate_collection(
         collection_name=name,
-        vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
+        vectors_config={
+            "text-dense": VectorParams(size=vector_size, distance=Distance.COSINE),
+        },
     )
 
 

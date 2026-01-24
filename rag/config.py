@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = REPO_ROOT / "Data"
+DATA_DIR = REPO_ROOT / "data"
 
 MASTER_FILENAME = "reframing_retirement_master_data_set.txt"
 ACTIVITY_FILENAME = "reframing_retirement_activity_list.txt"

@@ -1,13 +1,9 @@
-"""Tests for CoachAgent state updates:makes sure the agent’s state flips to the right layer when someone gives clear info, and falls back to a clarifying question when they’re vague."""
+"""Tests for CoachAgent state updates:makes sure the agent's state flips to the right layer when someone gives clear info, and falls back to a clarifying question when they're vague."""
 
 import unittest
 
-from coach.agent import (
-    FREQUENCY_QUESTION,
-    TIMEFRAME_QUESTION,
-    CoachAgent,
-    LAYER_CONFIDENCE_THRESHOLD,
-)
+from coach import CoachAgent, LAYER_CONFIDENCE_THRESHOLD
+from coach.constants import FREQUENCY_QUESTION, TIMEFRAME_QUESTION
 
 
 class DummyClient:
