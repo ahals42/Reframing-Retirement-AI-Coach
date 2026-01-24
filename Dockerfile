@@ -51,10 +51,8 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # This excludes .env, .git, __pycache__, etc.
 COPY --chown=appuser:appuser backend/ ./backend/
 COPY --chown=appuser:appuser coach/ ./coach/
-COPY --chown=appuser:appuser prompts/ ./prompts/
 COPY --chown=appuser:appuser rag/ ./rag/
 COPY --chown=appuser:appuser frontend/ ./frontend/
-COPY --chown=appuser:appuser main.py ./
 
 # Switch to non-root user
 USER appuser

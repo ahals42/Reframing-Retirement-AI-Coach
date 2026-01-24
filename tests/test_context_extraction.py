@@ -1,8 +1,8 @@
-"""Tests for barrier/activity/time extraction helpers:just double-checks that our little helper functions actually recognize common barriers (“no time”), activities (“swimming + yoga”), and time estimates (“15 minutes”)."""
+"""Tests for barrier/activity/time extraction helpers:just double-checks that our little helper functions actually recognize common barriers ("no time"), activities ("swimming + yoga"), and time estimates ("15 minutes")."""
 
 import unittest
 
-from coach.agent import infer_activities, infer_barrier, infer_time_available
+from coach import infer_activities, infer_barrier, infer_time_available
 
 
 class ContextExtractionTests(unittest.TestCase):

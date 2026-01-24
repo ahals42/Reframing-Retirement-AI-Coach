@@ -2,14 +2,16 @@
 
 import unittest
 
-from coach.agent import (
-    FREQUENCY_QUESTION,
+from coach import (
     LAYER_CONFIDENCE_THRESHOLD,
-    ROUTINE_QUESTION,
-    TIMEFRAME_QUESTION,
     LayerSignals,
     infer_process_layer,
     pick_layer_question,
+)
+from coach.constants import (
+    FREQUENCY_QUESTION,
+    ROUTINE_QUESTION,
+    TIMEFRAME_QUESTION,
 )
 
 

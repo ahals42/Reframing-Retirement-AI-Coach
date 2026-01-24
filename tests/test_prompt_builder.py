@@ -2,7 +2,7 @@
 
 import unittest
 
-from prompts.prompt import build_coach_prompt
+from coach.prompts import build_coach_prompt
 
 
 class PromptBuilderTests(unittest.TestCase):
