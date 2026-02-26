@@ -41,7 +41,9 @@ from .detection.detectors import (
     detect_educational_use_case,
     detect_sources_only,
     detect_lesson_overview_request,
+    detect_technical_support_request,
 )
+from .inference import TECHNICAL_SUPPORT_RESPONSE
 
 logger = logging.getLogger(__name__)
 
@@ -359,6 +361,9 @@ class CoachAgent:
         override_citations = False
         override_text = ""
         reference_block_references: List[str] = []
+        if detect_technical_support_request(user_input):
+            override_text = TECHNICAL_SUPPORT_RESPONSE
+            override_citations = True
         lesson_overview_num = detect_lesson_overview_request(user_input)
         if lesson_overview_num is not None and lesson_overview_num in self.lesson_overviews:
             overview = self.lesson_overviews[lesson_overview_num]

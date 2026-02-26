@@ -162,6 +162,46 @@ def extract_lesson_number(text: str) -> Optional[int]:
             return int(match.group("num"))
     return None
 
+
+# Patterns to detect technical support questions about the study app or devices.
+TECHNICAL_SUPPORT_PATTERNS: List[Pattern] = [
+    # Device name + connectivity/problem signal (no trailing \b — handles "connecting", "syncing", "pairing")
+    re.compile(
+        r"\b(fitbit|garmin|apple\s*watch|samsung\s*watch|smartwatch|wearable|fitness\s*tracker)\b"
+        r".{0,60}\b(not\s+connect\w*|won'?t\s+connect\w*|can'?t\s+connect\w*|not\s+sync\w*|won'?t\s+sync\w*|"
+        r"can'?t\s+sync\w*|not\s+pair\w*|won'?t\s+pair\w*|not\s+work\w*|issue|problem|error)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(not\s+connect\w*|won'?t\s+connect\w*|can'?t\s+connect\w*|not\s+sync\w*|won'?t\s+sync\w*|can'?t\s+sync\w*)"
+        r".{0,60}\b(fitbit|garmin|apple\s*watch|samsung\s*watch|smartwatch|wearable|tracker|device)\b",
+        re.IGNORECASE,
+    ),
+    # App crashes / errors
+    re.compile(r"\bapp\s+(keeps?\s+)?(crash\w*|not\s+work\w*|won'?t\s+(?:open|load|start)|freez\w*)\b", re.IGNORECASE),
+    re.compile(r"\b(app|application)\b.{0,40}\b(crash\w*|error|broken|not\s+work\w*|freez\w*)\b", re.IGNORECASE),
+    # Login / access
+    re.compile(r"\bcan'?t\s+(log\s*in|login|sign\s*in)\b", re.IGNORECASE),
+    re.compile(r"\b(forgot|reset|lost)\b.{0,15}\bpassword\b", re.IGNORECASE),
+    re.compile(r"\blocked\s+out\b", re.IGNORECASE),
+    # Error messages
+    re.compile(r"\berror\s+message\b", re.IGNORECASE),
+    re.compile(r"\b(getting|seeing)\s+an?\s+error\b", re.IGNORECASE),
+    # Technical issue / support
+    re.compile(r"\btechnical\s+(issue|problem|support|help|error)\b", re.IGNORECASE),
+    # "how do I use" + app-specific UI terms
+    re.compile(
+        r"\bhow\s+do\s+i\s+use\b.{0,40}\b(feature|button|section|tab|setting|notification|reminder|dashboard|log)\b",
+        re.IGNORECASE,
+    ),
+]
+
+TECHNICAL_SUPPORT_RESPONSE = (
+    "For technical support, please reach out to support@pathverse.ca. "
+    "Please include any relevant information or screenshots of the problem "
+    "in your message so we can help."
+)
+
 # Patterns for detecting emotional regulation needs
 EMOTION_STRONG_PATTERNS: List[Pattern] = [
     re.compile(r"\b(stress|stressed|stressful)\s+(about|around)\s+(exercise|activity|moving|movement|being active)\b", re.IGNORECASE),

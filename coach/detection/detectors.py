@@ -14,6 +14,7 @@ from ..inference import (
     LESSON_LOOKUP_PATTERNS,
     EDUCATIONAL_REQUEST_PATTERNS,
     SOURCE_REQUEST_PATTERNS,
+    TECHNICAL_SUPPORT_PATTERNS,
     extract_lesson_number,
 )
 from ..constants import ACTIVITY_CONTEXT_KEYWORDS
@@ -76,6 +77,11 @@ def detect_educational_use_case(text: str, *, explicit_module_request: bool, dec
 def detect_lesson_overview_request(text: str) -> Optional[int]:
     """Return the lesson number if user is asking for an overview of a specific lesson."""
     return extract_lesson_number(text)
+
+
+def detect_technical_support_request(text: str) -> bool:
+    """Detect if user is asking a technical support question about the app or devices."""
+    return _contains_patterns(text, TECHNICAL_SUPPORT_PATTERNS)
 
 
 def detect_sources_only(text: str) -> bool:
