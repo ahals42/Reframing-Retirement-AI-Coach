@@ -71,11 +71,14 @@ class CoachAgent:
         self.router = router or QueryRouter()
         self.latest_retrieval: Optional[RetrievalResult] = None
         self.last_retrieval_with_results: Optional[RetrievalResult] = None
+        from rag.parsing_master import parse_lesson_overviews
+        from rag.config import DATA_DIR, MASTER_FILENAME
         self.lesson_overviews: Dict[int, Dict[str, str]] = {}
-        if retriever is not None:
-            from rag.parsing_master import parse_lesson_overviews
-            data_path = retriever.config.master_data_path
-            self.lesson_overviews = parse_lesson_overviews(data_path)
+        try:
+            _data_path = retriever.config.master_data_path if retriever is not None else DATA_DIR / MASTER_FILENAME
+            self.lesson_overviews = parse_lesson_overviews(_data_path)
+        except Exception:
+            pass
 
     def _validate_input(self, user_input: str) -> None:
         """
@@ -608,6 +611,11 @@ class CoachAgent:
                     continue
                 filtered.append(sentence)
             sentences = filtered
+        if module_reference_sentence:
+            sentences = [
+                s for s in sentences
+                if not re.search(r"(you can find|find) more detail|you should check out these module|you can find that in the module", s, re.IGNORECASE)
+            ]
         if response_mode == "source_request":
             max_content = 2
         else:
