@@ -57,6 +57,45 @@ def _split_chunks(text: str) -> Iterable[str]:
             yield cleaned
 
 
+LESSON_DESCRIPTION_PATTERN = re.compile(r"Lesson Description:\s*(.+)", flags=re.IGNORECASE | re.DOTALL)
+
+
+def parse_lesson_overviews(path: Path) -> Dict[int, Dict[str, str]]:
+    """Return a mapping of lesson number to title and description.
+
+    The description is taken from the 'Lesson Description:' line on slide 1
+    of each lesson.
+    """
+    if not path.exists():
+        return {}
+
+    text = path.read_text(encoding="utf-8")
+    overviews: Dict[int, Dict[str, str]] = {}
+    current_lesson_num: int = 0
+    current_lesson_title: str = ""
+    description_captured: bool = False
+
+    for segment in _split_chunks(text):
+        lesson_match = LESSON_PATTERN.search(segment)
+        if lesson_match:
+            current_lesson_num = int(lesson_match.group("num"))
+            current_lesson_title = _clean_lesson_title(lesson_match.group("title"))
+            description_captured = False
+
+        slide_match = SLIDE_PATTERN.search(segment)
+        if slide_match and not description_captured and current_lesson_num:
+            desc_match = LESSON_DESCRIPTION_PATTERN.search(segment)
+            if desc_match:
+                description = desc_match.group(1).strip()
+                overviews[current_lesson_num] = {
+                    "title": current_lesson_title,
+                    "description": description,
+                }
+                description_captured = True
+
+    return overviews
+
+
 def parse_master_file(path: Path) -> List[MasterChunk]:
     """Parse the master dataset into structured chunks."""
 

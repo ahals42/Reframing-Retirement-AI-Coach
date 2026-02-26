@@ -104,6 +104,14 @@ class RetrievedChunk:
         location = self.metadata.get("location", "")
         return f"{activity_name} ({location})".strip()
 
+    def lesson_reference(self) -> Optional[str]:
+        """Return a lesson-level reference (no slide info)."""
+        if self.doc_type == "master":
+            lesson = self.metadata.get("lesson_number")
+            lesson_title = self.metadata.get("lesson_title") or "Untitled lesson"
+            return f"Lesson {lesson}: {lesson_title}"
+        return self.reference()
+
     def reference(self) -> Optional[str]:
         if self.doc_type == "master":
             lesson = self.metadata.get("lesson_number")
