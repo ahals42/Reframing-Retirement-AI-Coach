@@ -14,10 +14,10 @@ from ..inference import (
     LESSON_LOOKUP_PATTERNS,
     EDUCATIONAL_REQUEST_PATTERNS,
     SOURCE_REQUEST_PATTERNS,
+    extract_lesson_number,
 )
 from ..constants import ACTIVITY_CONTEXT_KEYWORDS
 
-# Import RouteDecision for type hint - use string annotation to avoid import at module level
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from rag.router import RouteDecision
@@ -71,6 +71,11 @@ def detect_educational_use_case(text: str, *, explicit_module_request: bool, dec
         return False
     lowered = text.lower()
     return _contains_patterns(lowered, EDUCATIONAL_REQUEST_PATTERNS)
+
+
+def detect_lesson_overview_request(text: str) -> Optional[int]:
+    """Return the lesson number if user is asking for an overview of a specific lesson."""
+    return extract_lesson_number(text)
 
 
 def detect_sources_only(text: str) -> bool:

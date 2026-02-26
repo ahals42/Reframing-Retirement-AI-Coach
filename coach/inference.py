@@ -1,7 +1,7 @@
 """Pattern definitions and layer inference functions."""
 
 import re
-from typing import List, Pattern
+from typing import List, Optional, Pattern
 
 from .detection.text_match import _contains_patterns, _contains_keywords
 from .state import LayerSignals, LayerInference
@@ -137,6 +137,30 @@ LESSON_LOOKUP_PATTERNS: List[Pattern] = [
     re.compile(r"\bwhere in (?:the )?module\b", re.IGNORECASE),
     re.compile(r"\bwhere in (?:the )?lesson\b", re.IGNORECASE),
 ]
+
+# Patterns to detect "tell me about lesson X" style overview requests.
+# Each pattern must have a named group 'num' capturing the lesson number.
+LESSON_OVERVIEW_PATTERNS: List[Pattern] = [
+    re.compile(r"\btell me about lesson\s+(?P<num>\d+)\b", re.IGNORECASE),
+    re.compile(r"\bwhat(?:'?s|\s+is)\s+lesson\s+(?P<num>\d+)\b", re.IGNORECASE),
+    re.compile(r"\bexplain lesson\s+(?P<num>\d+)\b", re.IGNORECASE),
+    re.compile(r"\bdescribe lesson\s+(?P<num>\d+)\b", re.IGNORECASE),
+    re.compile(r"\babout lesson\s+(?P<num>\d+)\b", re.IGNORECASE),
+    re.compile(r"\blesson\s+(?P<num>\d+)\s+overview\b", re.IGNORECASE),
+    re.compile(r"\boverview of lesson\s+(?P<num>\d+)\b", re.IGNORECASE),
+    re.compile(r"\bsummary of lesson\s+(?P<num>\d+)\b", re.IGNORECASE),
+    re.compile(r"\bwhat(?:'?s|\s+is)\s+in lesson\s+(?P<num>\d+)\b", re.IGNORECASE),
+    re.compile(r"\bwhat does lesson\s+(?P<num>\d+)\s+cover\b", re.IGNORECASE),
+]
+
+
+def extract_lesson_number(text: str) -> Optional[int]:
+    """Return the lesson number if text matches a lesson overview request pattern."""
+    for pattern in LESSON_OVERVIEW_PATTERNS:
+        match = pattern.search(text)
+        if match:
+            return int(match.group("num"))
+    return None
 
 # Patterns for detecting emotional regulation needs
 EMOTION_STRONG_PATTERNS: List[Pattern] = [

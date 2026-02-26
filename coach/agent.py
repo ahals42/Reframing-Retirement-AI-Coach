@@ -40,6 +40,7 @@ from .detection.detectors import (
     detect_lesson_lookup,
     detect_educational_use_case,
     detect_sources_only,
+    detect_lesson_overview_request,
 )
 
 logger = logging.getLogger(__name__)
@@ -70,6 +71,11 @@ class CoachAgent:
         self.router = router or QueryRouter()
         self.latest_retrieval: Optional[RetrievalResult] = None
         self.last_retrieval_with_results: Optional[RetrievalResult] = None
+        self.lesson_overviews: Dict[int, Dict[str, str]] = {}
+        if retriever is not None:
+            from rag.parsing_master import parse_lesson_overviews
+            data_path = retriever.config.master_data_path
+            self.lesson_overviews = parse_lesson_overviews(data_path)
 
     def _validate_input(self, user_input: str) -> None:
         """
@@ -315,7 +321,8 @@ class CoachAgent:
                 max_refs=max_refs,
                 prefer_early_lessons=prefer_early_lessons,
             )
-        selected_references = self._format_reference_list(selected_chunks)
+        use_lesson_level_refs = explicit_module_request and not lesson_lookup
+        selected_references = self._format_reference_list(selected_chunks, lesson_level=use_lesson_level_refs)
         module_reference_sentence = ""
         module_reference_instruction: Optional[str] = None
         if response_mode in {"lowest_mpac", "emotion_education", "educational"}:
@@ -345,7 +352,15 @@ class CoachAgent:
         override_citations = False
         override_text = ""
         reference_block_references: List[str] = []
-        if lesson_lookup:
+        lesson_overview_num = detect_lesson_overview_request(user_input)
+        if lesson_overview_num is not None and lesson_overview_num in self.lesson_overviews:
+            overview = self.lesson_overviews[lesson_overview_num]
+            override_text = (
+                f"Lesson {lesson_overview_num}: {overview['title']}. "
+                f"{overview['description']}"
+            )
+            override_citations = True
+        elif lesson_lookup:
             override_text = self._build_lesson_lookup_response(selected_references)
             override_citations = True
         if source_request:
@@ -501,11 +516,11 @@ class CoachAgent:
         return pool[:max_refs]
 
     @staticmethod
-    def _format_reference_list(chunks: List[RetrievedChunk]) -> List[str]:
+    def _format_reference_list(chunks: List[RetrievedChunk], *, lesson_level: bool = False) -> List[str]:
         references: List[str] = []
         seen = set()
         for chunk in chunks:
-            ref = chunk.reference()
+            ref = chunk.lesson_reference() if lesson_level else chunk.reference()
             if ref and ref not in seen:
                 seen.add(ref)
                 references.append(ref)
