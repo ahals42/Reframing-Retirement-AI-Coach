@@ -53,6 +53,7 @@ COPY --chown=appuser:appuser backend/ ./backend/
 COPY --chown=appuser:appuser coach/ ./coach/
 COPY --chown=appuser:appuser rag/ ./rag/
 COPY --chown=appuser:appuser frontend/ ./frontend/
+COPY --chown=appuser:appuser data/ ./data/
 
 # Switch to non-root user
 USER appuser
