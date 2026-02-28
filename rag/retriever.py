@@ -96,6 +96,11 @@ class RetrievedChunk:
 
     def label(self) -> str:
         if self.doc_type == "master":
+            if self.metadata.get("content_type") == "science":
+                module = self.metadata.get("science_module_number")
+                slide = self.metadata.get("science_slide_number")
+                title = self.metadata.get("slide_title") or ""
+                return f"Science Module {module} Slide {slide}: {title}".strip()
             lesson = self.metadata.get("lesson_number")
             slide = self.metadata.get("slide_number")
             title = self.metadata.get("slide_title") or ""
@@ -107,6 +112,8 @@ class RetrievedChunk:
     def lesson_reference(self) -> Optional[str]:
         """Return a lesson-level reference (no slide info)."""
         if self.doc_type == "master":
+            if self.metadata.get("content_type") == "science":
+                return self.reference()
             lesson = self.metadata.get("lesson_number")
             lesson_title = self.metadata.get("lesson_title") or "Untitled lesson"
             return f"Lesson {lesson}: {lesson_title}"
@@ -114,6 +121,12 @@ class RetrievedChunk:
 
     def reference(self) -> Optional[str]:
         if self.doc_type == "master":
+            if self.metadata.get("content_type") == "science":
+                module = self.metadata.get("science_module_number")
+                module_title = self.metadata.get("science_module_title") or "Untitled module"
+                slide = self.metadata.get("science_slide_number")
+                slide_title = self.metadata.get("slide_title") or "Untitled slide"
+                return f"Science Module {module}: {module_title} -> Slide {slide} ({slide_title})"
             lesson = self.metadata.get("lesson_number")
             lesson_title = self.metadata.get("lesson_title") or "Untitled lesson"
             slide = self.metadata.get("slide_number")
@@ -136,14 +149,17 @@ class RetrievalResult:
 
     def _reference_sort_key(self, chunk: RetrievedChunk) -> tuple:
         if chunk.doc_type == "master":
+            global_idx = chunk.metadata.get("global_slide_number") or 0
+            if chunk.metadata.get("content_type") == "science":
+                # Sort science after lessons, ordered by global slide number
+                return (1, int(global_idx))
             lesson = chunk.metadata.get("lesson_number") or 0
             slide = chunk.metadata.get("slide_number") or 0
-            global_idx = chunk.metadata.get("global_slide_number") or 0
             return (0, int(lesson), int(slide), int(global_idx))
         if chunk.doc_type == "activity":
             activity_id = chunk.metadata.get("activity_id") or 0
-            return (1, int(activity_id))
-        return (2, 0)
+            return (2, int(activity_id))
+        return (3, 0)
 
     def build_prompt_context(self) -> str:
         sections: List[str] = []
@@ -188,7 +204,7 @@ class RagRetriever:
     def _build_retriever(self, index: VectorStoreIndex, top_k: int) -> VectorIndexRetriever:
         return index.as_retriever(similarity_top_k=top_k)
 
-    def retrieve_master(self, query: str, top_k: Optional[int] = None) -> List[RetrievedChunk]:
+    def retrieve_master(self, query: str, top_k: Optional[int] = None, *, prefer_science: bool = False) -> List[RetrievedChunk]:
         retriever = self._build_retriever(self.master_index, top_k or self.config.master_top_k)
         nodes = retriever.retrieve(query)
         return [
@@ -200,6 +216,7 @@ class RagRetriever:
             )
             for node in nodes
             if not node.node.metadata.get("do_not_reference", False)
+            and (prefer_science or node.node.metadata.get("content_type") != "science")
         ]
 
     def retrieve_activities(
@@ -255,7 +272,7 @@ class RagRetriever:
         activity_chunks: List[RetrievedChunk] = []
 
         if decision.use_master:
-            master_chunks = self.retrieve_master(query)
+            master_chunks = self.retrieve_master(query, prefer_science=decision.prefer_science)
         if decision.use_activities:
             activity_chunks = self.retrieve_activities(query, filters=decision.activity_filters)
 

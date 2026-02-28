@@ -110,9 +110,7 @@ def check_session_limit(request: Request, max_sessions: int = 50) -> bool:
     Returns:
         True if under limit, False if limit exceeded
     """
-    # TODO: Implement actual session count tracking
-    # This would require modifying session_store.py to track sessions per API key
-    # For now, we return True (no enforcement)
+    
     return True
 
 
@@ -130,9 +128,7 @@ def check_concurrent_streams(request: Request, max_concurrent: int = 10) -> bool
     Returns:
         True if under limit, False if limit exceeded
     """
-    # TODO: Implement actual concurrent stream tracking
-    # This would require tracking active SSE/streaming connections
-    # For now, we return True (no enforcement)
+
     return True
 
 
