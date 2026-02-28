@@ -124,6 +124,7 @@ class RetrievedChunk:
             if self.metadata.get("content_type") == "science":
                 module = self.metadata.get("science_module_number")
                 module_title = self.metadata.get("science_module_title") or "Untitled module"
+                module_title = re.sub(r"\s*\(\d+\s*slides?\)", "", module_title).strip()
                 slide = self.metadata.get("science_slide_number")
                 slide_title = self.metadata.get("slide_title") or "Untitled slide"
                 return f"{module_title} -> Slide {slide} ({slide_title})"
