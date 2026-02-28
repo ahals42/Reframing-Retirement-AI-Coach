@@ -70,6 +70,16 @@ TYPE_KEYWORDS = {
     "kayaking": ["kayak"],
 }
 
+SCIENCE_KEYWORDS = [
+    "science",
+    "evidence",
+    "research",
+    "studies",
+    "mechanism",
+    "data",
+    "proof",
+]
+
 
 @dataclass
 class ActivityFilters:
@@ -88,6 +98,7 @@ class RouteDecision:
     use_activities: bool = False
     activity_filters: Optional[ActivityFilters] = None
     needs_location_clarification: bool = False
+    prefer_science: bool = False
 
 
 class QueryRouter:
@@ -96,6 +107,7 @@ class QueryRouter:
     def route(self, user_input: str) -> RouteDecision:
         lowered = user_input.lower()
         use_activities = any(keyword in lowered for keyword in ACTIVITY_KEYWORDS)
+        prefer_science = any(keyword in lowered for keyword in SCIENCE_KEYWORDS)
 
         activity_filters = ActivityFilters()
 
@@ -128,6 +140,7 @@ class QueryRouter:
             use_activities=use_activities,
             activity_filters=activity_filters,
             needs_location_clarification=use_activities and not recognized_location,
+            prefer_science=prefer_science,
         )
 
         return route

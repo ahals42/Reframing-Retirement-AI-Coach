@@ -91,12 +91,26 @@ else:
     def _master_chunk() -> RetrievedChunk:
         metadata = {
             "doc_type": "master",
+            "content_type": "lesson",
             "lesson_number": 1,
             "lesson_title": "Why Physical Activity Matters",
             "slide_number": 3,
             "slide_title": "What is physical activity?",
         }
         return RetrievedChunk(doc_type="master", text="Physical activity definition", metadata=metadata)
+
+    def _science_chunk() -> RetrievedChunk:
+        metadata = {
+            "doc_type": "master",
+            "content_type": "science",
+            "lesson_number": None,
+            "science_module_number": 1,
+            "science_module_title": "The Science Behind WHY to be Active",
+            "science_slide_number": 2,
+            "global_slide_number": 96,
+            "slide_title": "Did you know?",
+        }
+        return RetrievedChunk(doc_type="master", text="Exercise reduces risk of 25+ chronic diseases", metadata=metadata)
 
     @unittest.skipUnless(RAG_AVAILABLE, "llama-index not installed; skip RAG routing tests")
     class RagRoutingTests(unittest.TestCase):
@@ -142,6 +156,91 @@ else:
 
             self.assertIn("From your modules", reply)
             self.assertIn("Lesson 1:", reply)
+
+        # ------------------------------------------------------------------
+        # Science routing tests
+        # ------------------------------------------------------------------
+
+        def test_router_science_keywords_set_prefer_science(self) -> None:
+            router = QueryRouter()
+            for query in [
+                "What does the science say?",
+                "What evidence supports this?",
+                "Show me the research on exercise",
+                "What studies back this up?",
+                "Explain the mechanism behind habit formation",
+                "Is there data on this?",
+                "Any proof that exercise helps?",
+            ]:
+                decision = router.route(query)
+                self.assertTrue(decision.prefer_science, f"Expected prefer_science=True for: {query!r}")
+
+        def test_router_why_alone_does_not_set_prefer_science(self) -> None:
+            router = QueryRouter()
+            decision = router.route("Why can't I stay motivated?")
+            self.assertFalse(decision.prefer_science)
+
+        def test_router_general_coaching_does_not_set_prefer_science(self) -> None:
+            router = QueryRouter()
+            for query in [
+                "How do I stay active in retirement?",
+                "I find it hard to get started",
+                "What should I do this week?",
+            ]:
+                decision = router.route(query)
+                self.assertFalse(decision.prefer_science, f"Expected prefer_science=False for: {query!r}")
+
+        def test_science_chunk_label_format(self) -> None:
+            chunk = _science_chunk()
+            self.assertEqual(chunk.label(), "Science Module 1 Slide 2: Did you know?")
+
+        def test_science_chunk_reference_format(self) -> None:
+            chunk = _science_chunk()
+            ref = chunk.reference()
+            self.assertEqual(
+                ref,
+                "Science Module 1: The Science Behind WHY to be Active -> Slide 2 (Did you know?)",
+            )
+
+        def test_lesson_chunk_label_unchanged(self) -> None:
+            chunk = _master_chunk()
+            self.assertEqual(chunk.label(), "Lesson 1 Slide 3: What is physical activity?")
+
+        def test_lesson_chunk_reference_unchanged(self) -> None:
+            chunk = _master_chunk()
+            ref = chunk.reference()
+            self.assertEqual(
+                ref,
+                "Lesson 1: Why Physical Activity Matters -> Slide 3 (What is physical activity?)",
+            )
+
+        def test_science_chunks_excluded_from_regular_retrieval(self) -> None:
+            # Science chunks should not appear in non-science (prefer_science=False) retrieve_master calls
+            # StubRetriever captures decision; verify prefer_science=False is passed for a normal query
+            result = RetrievalResult(master_chunks=[_master_chunk()], activity_chunks=[])
+            decision = RouteDecision(use_master=True, use_activities=False, prefer_science=False)
+            retriever = StubRetriever(result)
+            router = StubRouter(decision)
+            stub_client = StubClient()
+            agent = CoachAgent(client=stub_client, model="fake-model", retriever=retriever, router=router)
+
+            agent.generate_response("How do I stay motivated?")
+
+            received_decision = retriever.received_decisions[0]
+            self.assertFalse(received_decision.prefer_science)
+
+        def test_prefer_science_passed_to_retriever_for_science_query(self) -> None:
+            result = RetrievalResult(master_chunks=[_science_chunk()], activity_chunks=[])
+            decision = RouteDecision(use_master=True, use_activities=False, prefer_science=True)
+            retriever = StubRetriever(result)
+            router = StubRouter(decision)
+            stub_client = StubClient()
+            agent = CoachAgent(client=stub_client, model="fake-model", retriever=retriever, router=router)
+
+            agent.generate_response("What does the research show about exercise?")
+
+            received_decision = retriever.received_decisions[0]
+            self.assertTrue(received_decision.prefer_science)
 
 
 if __name__ == "__main__":
