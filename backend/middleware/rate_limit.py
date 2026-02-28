@@ -5,9 +5,9 @@ This module provides rate limiting functionality using slowapi (compatible with 
 Implements per-API-key rate limits for different endpoint types.
 
 Rate Limit Tiers:
-- Message endpoints: 100 requests/hour per API key
-- Voice endpoints: 10 concurrent streams per API key
-- Session creation: 50 active sessions per API key
+- Message endpoints: 500 requests/hour per API key
+- Voice endpoints: 15 concurrent streams per API key
+- Session creation: 60 sessions/hour per API key
 - Health check: No limits (for monitoring)
 
 Security Features:
@@ -90,9 +90,9 @@ limiter = Limiter(
 
 # Rate limit configurations (can be overridden by environment variables)
 RATE_LIMITS = {
-    "messages_per_hour": os.getenv("RATE_LIMIT_MESSAGES_PER_HOUR", "100"),
-    "voice_concurrent": os.getenv("RATE_LIMIT_VOICE_CONCURRENT", "10"),
-    "session_creation_per_hour": os.getenv("RATE_LIMIT_SESSION_CREATION_PER_HOUR", "40"),
+    "messages_per_hour": os.getenv("RATE_LIMIT_MESSAGES_PER_HOUR", "500"),
+    "voice_concurrent": os.getenv("RATE_LIMIT_VOICE_CONCURRENT", "15"),
+    "session_creation_per_hour": os.getenv("RATE_LIMIT_SESSION_CREATION_PER_HOUR", "60"),
 }
 
 
