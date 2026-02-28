@@ -92,7 +92,7 @@ limiter = Limiter(
 RATE_LIMITS = {
     "messages_per_hour": os.getenv("RATE_LIMIT_MESSAGES_PER_HOUR", "100"),
     "voice_concurrent": os.getenv("RATE_LIMIT_VOICE_CONCURRENT", "10"),
-    "session_creation_per_hour": os.getenv("RATE_LIMIT_SESSION_CREATION_PER_HOUR", "20"),
+    "session_creation_per_hour": os.getenv("RATE_LIMIT_SESSION_CREATION_PER_HOUR", "40"),
 }
 
 
