@@ -1,5 +1,5 @@
 # Reframing Retirement Coach
-An autonomy-supportive chat coach that helps newly retired adults plan realistic physical activity by combining retrieval-augmented context with OpenAI guidance.
+An autonomy-supportive conversational agent that helps newly retired adults plan realistic physical activity by combining retrieval-augmented context with OpenAI guidance.
 
 ## Project Status
 Deployed on AWS Lightsail and currently under feasibility testing with participants through the Pathverse mobile app.
@@ -20,7 +20,7 @@ Participants interact via the Pathverse mobile app. The API spins up a `CoachAge
   <tr>
     <td align="center" width="45%">
       <img src="docs/assets/app-view.png" alt="Reframing Retirement Companion in the Pathverse app" width="300"/><br/>
-      <em>Pathverse app (voice-first)</em>
+      <em>Pathverse app</em>
     </td>
     <td align="center" width="55%">
       <img src="docs/assets/cloud-view.png" alt="Reframing Retirement Coach browser interface" width="500"/><br/>
