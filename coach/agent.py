@@ -642,7 +642,7 @@ class CoachAgent:
     def _append_reference_block(self, base_text: str, references: List[str], max_refs: int = 1) -> str:
         limited = references[:max_refs]
         if limited:
-            module_block = "\n".join(f"- {ref}" for ref in limited)
+            module_block = "\n\n".join(f"- {ref}" for ref in limited)
             return f"{base_text}\n\nFrom your modules, you can find more detail at:\n{module_block}"
         fallback_msg = (
             "I couldn't find a specific slide to cite for that. "
