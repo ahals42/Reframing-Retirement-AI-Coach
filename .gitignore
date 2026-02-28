@@ -40,3 +40,6 @@ frontend/dev-auth.js
 
 # Local-only documentation (AI guides, security docs)
 docs/refs/
+
+# python file for creating flow charts
+_gen_diagrams.py
