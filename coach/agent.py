@@ -73,6 +73,7 @@ class CoachAgent:
         self.router = router or QueryRouter()
         self.latest_retrieval: Optional[RetrievalResult] = None
         self.last_retrieval_with_results: Optional[RetrievalResult] = None
+        self._last_prefer_science: bool = False
         from rag.parsing_master import parse_lesson_overviews
         from rag.config import DATA_DIR, MASTER_FILENAME
         self.lesson_overviews: Dict[int, Dict[str, str]] = {}
@@ -236,8 +237,10 @@ class CoachAgent:
         self.latest_retrieval = None
         routing_instruction: Optional[str] = None
         decision: Optional[RouteDecision] = None
-        if self.retriever:
+        sources_only_followup = detect_sources_only(user_input)
+        if self.retriever and not sources_only_followup:
             decision = self.router.route(user_input)
+            self._last_prefer_science = decision.prefer_science
             retrieval_result = self.retriever.gather_context(user_input, decision)
             context_block = retrieval_result.build_prompt_context() if retrieval_result else None
             self.latest_retrieval = retrieval_result
@@ -245,7 +248,7 @@ class CoachAgent:
                 self.last_retrieval_with_results = retrieval_result
 
         source_request = self._needs_citations(user_input)
-        sources_only = detect_sources_only(user_input)
+        sources_only = sources_only_followup
         lesson_lookup = detect_lesson_lookup(user_input)
         explicit_module_request = source_request or detect_module_request(user_input) or lesson_lookup
         general_disinterest = detect_general_disinterest(user_input)
@@ -376,10 +379,12 @@ class CoachAgent:
             override_text = self._build_lesson_lookup_response(selected_references)
             override_citations = True
         if source_request:
+            prefer_science_refs = (decision.prefer_science if decision else False) or (sources_only and self._last_prefer_science)
             source_chunks = self._select_reference_chunks(
                 reference_source,
                 max_refs=self._reference_pool_limit(reference_source),
                 prefer_early_lessons=False,
+                prefer_science=prefer_science_refs,
                 pool_limit=self._reference_pool_limit(reference_source),
             )
             reference_block_references = self._format_reference_list(source_chunks)
@@ -486,6 +491,7 @@ class CoachAgent:
         *,
         max_refs: int,
         prefer_early_lessons: bool,
+        prefer_science: bool = False,
         pool_limit: int = REFERENCE_POOL_SIZE,
     ) -> List[RetrievedChunk]:
         """
@@ -494,13 +500,21 @@ class CoachAgent:
         When prefer_early_lessons is True (for lowest-MPAC users), prioritizes
         foundational content (Lessons 1-2) over higher-ranked later lessons,
         unless the later lesson significantly outscores early content.
+
+        When prefer_science is True, science chunks are sorted to the top of
+        the citation list regardless of score.
         """
         if not retrieval or not retrieval.master_chunks or max_refs <= 0:
             return []
         chunks = list(retrieval.master_chunks)
         score_values = [chunk.score for chunk in chunks if chunk.score is not None]
         use_scores = bool(score_values) and all(0.0 <= score <= 1.0 for score in score_values)
-        if use_scores:
+        if prefer_science:
+            ranked = sorted(
+                chunks,
+                key=lambda c: (0 if c.metadata.get("content_type") == "science" else 1, -(c.score or 0.0)),
+            )
+        elif use_scores:
             ranked = sorted(chunks, key=lambda chunk: (chunk.score is None, -(chunk.score or 0.0)))
         else:
             ranked = chunks
