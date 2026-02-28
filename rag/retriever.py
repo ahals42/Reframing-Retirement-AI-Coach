@@ -126,7 +126,7 @@ class RetrievedChunk:
                 module_title = self.metadata.get("science_module_title") or "Untitled module"
                 slide = self.metadata.get("science_slide_number")
                 slide_title = self.metadata.get("slide_title") or "Untitled slide"
-                return f"Science Module {module}: {module_title} -> Slide {slide} ({slide_title})"
+                return f"{module_title} -> Slide {slide} ({slide_title})"
             lesson = self.metadata.get("lesson_number")
             lesson_title = self.metadata.get("lesson_title") or "Untitled lesson"
             slide = self.metadata.get("slide_number")
