@@ -46,7 +46,9 @@ def _to_nodes(chunks: Sequence[MasterChunk | ActivityChunk]) -> Sequence[TextNod
 
 def _ensure_collection(client: QdrantClient, name: str, vector_size: int) -> None:
     logger.info("Creating collection %s (size=%s)", name, vector_size)
-    client.recreate_collection(
+    if client.collection_exists(name):
+        client.delete_collection(name)
+    client.create_collection(
         collection_name=name,
         vectors_config={
             "text-dense": VectorParams(size=vector_size, distance=Distance.COSINE),
