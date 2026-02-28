@@ -2,27 +2,39 @@
 An autonomy-supportive chat coach that helps newly retired adults plan realistic physical activity by combining retrieval-augmented context with OpenAI guidance.
 
 ## Project Status
-Deployed cloud hosted MVP under active development.
-The system is undergoing ongoing output evaluation and iterative feature development in advance of a planned feasibility study.
+Deployed on AWS Lightsail and currently under feasibility testing with participants through the Pathverse mobile app.
 
 ## How It Works
-The user chats through a lightweight browser UI that streams messages to a FastAPI service. The API spins up a `CoachAgent` session, keeps conversational state in memory, optionally queries the Qdrant vector store for local resources, then composes a grounded prompt for the OpenAI Chat API before streaming the reply back to the browser.
+Participants interact via the Pathverse mobile app (voice-first, hold-to-speak) or a browser web UI — both route to the same FastAPI backend. The API spins up a `CoachAgent` session, keeps conversational state in memory, and queries the Qdrant vector store for relevant lesson content, Science Behind modules, or local activity options depending on what the user is asking. It then composes a grounded prompt for the OpenAI Chat API and streams the reply back to the participant.
 
 ## Key Features
-- **Behavior-aware coaching:** The agent silently tracks barriers, preferred activities, and time windows to keep suggestions realistic.
-- **Retrieval on demand:** A Qdrant-backed RAG pipeline injects lesson content and local activity options when the user asks for specifics.
-- **Browser-first local testing:** The static frontend can hit a local FastAPI instance, giving you the full chat experience in your browser before ever deploying.
-- **Safety-first prompt design:** The system prompt enforces scope boundaries (non-clinical, no emergencies) and a motivational interviewing style.
+- **Behavior-aware coaching:** The agent silently tracks barriers, preferred activities, and time windows across the conversation to keep suggestions realistic.
+- **Dual delivery:** Participants engage through the Pathverse mobile app (voice-first with hold-to-speak) or a browser interface; the same backend and coaching logic serve both.
+- **RAG pipeline:** A Qdrant-backed retrieval layer covers lesson content, Science Behind modules, and local activity listings. Science-intent queries (research, evidence, studies) are automatically routed to surface science module citations.
+- **Safety-first design:** The system prompt enforces non-clinical scope boundaries, no emergency handling, and a motivational interviewing style throughout.
+- **Rate-limited session management:** Per-key session caps, per-hour message limits, and concurrent voice stream limits are enforced at the API layer.
 
 ## Experience Snapshot
-![Browser conversation screenshot showing the coach answering winter walking questions](docs/assets/browser-chat.png)
+
+<table>
+  <tr>
+    <td align="center" width="45%">
+      <img src="docs/assets/app-view.png" alt="Reframing Retirement Companion in the Pathverse app" width="300"/><br/>
+      <em>Pathverse app (voice-first)</em>
+    </td>
+    <td align="center" width="55%">
+      <img src="docs/assets/cloud-view.png" alt="Reframing Retirement Coach browser interface" width="500"/><br/>
+      <em>Browser interface</em>
+    </td>
+  </tr>
+</table>
 
 ## Logical System Architecture (Component-Level Flow)
-This diagram explains what the system is and how information moves: the retiree’s chat request flows through the frontend, FastAPI layer, in-memory session store, conversation engine, optional RAG retriever, and finally to the OpenAI API before streaming back.
+This diagram shows how information moves through the system: a participant's message flows from the frontend through the FastAPI layer, which delegates to the in-memory `CoachAgent`. The agent optionally queries the RAG retriever (covering lesson, science, and activity data) before composing a prompt and streaming the OpenAI reply back.
 
 ![Logical system architecture flow](docs/assets/logical-architecture.png)
 
 ## Deployed Cloud Architecture (Runtime & Infrastructure Flow)
-This view shows where everything runs today: the browser talks over HTTP to the AWS-hosted frontend, which forwards chat POST/SSE requests to the FastAPI service. That service manages sessions, pulls vectors from the Qdrant store running on the same AWS host, and sends prompts to OpenAI.
+This view shows where everything runs: participants connect via the Pathverse app or browser, hitting the frontend and FastAPI service hosted on AWS Lightsail. The Coach API manages sessions, retrieves vectors from the co-located Qdrant store, and sends prompts to the external OpenAI API before streaming replies back.
 
 ![Cloud runtime flow](docs/assets/cloud-architecture.png)
