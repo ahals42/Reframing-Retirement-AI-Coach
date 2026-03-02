@@ -5,7 +5,7 @@ from __future__ import annotations
 import html
 import re
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence
 
 from llama_index.core import Settings, VectorStoreIndex
@@ -105,6 +105,12 @@ class RetrievedChunk:
             slide = self.metadata.get("slide_number")
             title = self.metadata.get("slide_title") or ""
             return f"Lesson {lesson} Slide {slide}: {title}".strip()
+        if self.doc_type == "home_activity":
+            resource_type = self.metadata.get("resource_type", "resource")
+            ref_num = self.metadata.get("ref_number", "?")
+            name = self.metadata.get("activity_name", "Activity")
+            type_label = {"video": "Individual Video", "playlist": "Video Playlist", "blog": "Blog"}.get(resource_type, "Resource")
+            return f"{type_label} #{ref_num}: {name}"
         activity_name = self.metadata.get("activity_name", "Activity")
         location = self.metadata.get("location", "")
         return f"{activity_name} ({location})".strip()
@@ -140,6 +146,12 @@ class RetrievedChunk:
             schedule = self.metadata.get("schedule", "Schedule TBD")
             cost = self.metadata.get("cost_raw", "Cost unknown")
             return f"Activity {activity_id}: {name} — {location}, {schedule}, {cost}"
+        if self.doc_type == "home_activity":
+            resource_type = self.metadata.get("resource_type", "resource")
+            ref_num = self.metadata.get("ref_number", "?")
+            name = self.metadata.get("activity_name", "Activity")
+            type_label = {"video": "Individual Video", "playlist": "Video Playlist", "blog": "Blog"}.get(resource_type, "Resource")
+            return f"{type_label} #{ref_num}: {name}"
         return None
 
 
@@ -147,6 +159,7 @@ class RetrievedChunk:
 class RetrievalResult:
     master_chunks: Sequence[RetrievedChunk]
     activity_chunks: Sequence[RetrievedChunk]
+    home_chunks: Sequence[RetrievedChunk] = field(default_factory=list)
 
     def _reference_sort_key(self, chunk: RetrievedChunk) -> tuple:
         if chunk.doc_type == "master":
@@ -160,6 +173,9 @@ class RetrievalResult:
         if chunk.doc_type == "activity":
             activity_id = chunk.metadata.get("activity_id") or 0
             return (2, int(activity_id))
+        if chunk.doc_type == "home_activity":
+            ref_num = chunk.metadata.get("ref_number") or 0
+            return (2, int(ref_num))
         return (3, 0)
 
     def build_prompt_context(self) -> str:
@@ -168,6 +184,8 @@ class RetrievalResult:
             sections.append(self._format_section("Master slides", self.master_chunks))
         if self.activity_chunks:
             sections.append(self._format_section("Local activities", self.activity_chunks))
+        if self.home_chunks:
+            sections.append(self._format_section("At-home resources", self.home_chunks))
         return "\n\n".join(sections)
 
     def _format_section(self, title: str, chunks: Sequence[RetrievedChunk]) -> str:
@@ -179,7 +197,7 @@ class RetrievalResult:
     def references(self) -> List[str]:
         refs: List[str] = []
         seen = set()
-        chunks = list(self.master_chunks) + list(self.activity_chunks)
+        chunks = list(self.master_chunks) + list(self.activity_chunks) + list(self.home_chunks)
         for chunk in sorted(chunks, key=self._reference_sort_key):
             citation = chunk.reference()
             if citation and citation not in seen:
@@ -197,6 +215,7 @@ class RagRetriever:
         self.client = QdrantClient(url=config.qdrant_url, api_key=config.qdrant_api_key)
         self.master_index = self._build_index(config.master_collection)
         self.activity_index = self._build_index(config.activities_collection)
+        self.home_index = self._build_index(config.home_collection)
 
     def _build_index(self, collection_name: str) -> VectorStoreIndex:
         vector_store = QdrantVectorStore(client=self.client, collection_name=collection_name)
@@ -268,13 +287,51 @@ class RagRetriever:
 
         return [chunk for chunk in chunks if matches(chunk)]
 
+    def retrieve_home(
+        self,
+        query: str,
+        *,
+        activity_type: Optional[str] = None,
+        resource_type: Optional[str] = None,
+        top_k: Optional[int] = None,
+    ) -> List[RetrievedChunk]:
+        base_top_k = top_k or self.config.home_top_k
+        retriever = self._build_retriever(self.home_index, base_top_k)
+        nodes = retriever.retrieve(query)
+        chunks = [
+            RetrievedChunk(
+                doc_type=node.node.metadata.get("doc_type", "home_activity"),
+                text=_node_content(node.node),
+                metadata=node.node.metadata,
+                score=node.score,
+            )
+            for node in nodes
+        ]
+        if activity_type:
+            chunks = [c for c in chunks if c.metadata.get("activity_type") == activity_type]
+        if resource_type:
+            chunks = [c for c in chunks if c.metadata.get("resource_type") == resource_type]
+        return chunks[:base_top_k]
+
     def gather_context(self, query: str, decision: RouteDecision) -> RetrievalResult:
         master_chunks: List[RetrievedChunk] = []
         activity_chunks: List[RetrievedChunk] = []
+        home_chunks: List[RetrievedChunk] = []
 
         if decision.use_master:
             master_chunks = self.retrieve_master(query, prefer_science=decision.prefer_science)
         if decision.use_activities:
             activity_chunks = self.retrieve_activities(query, filters=decision.activity_filters)
+        if decision.use_home:
+            activity_type = decision.activity_filters.activity_type if decision.activity_filters else None
+            home_chunks = self.retrieve_home(
+                query,
+                activity_type=activity_type,
+                resource_type=decision.home_resource_type,
+            )
 
-        return RetrievalResult(master_chunks=master_chunks, activity_chunks=activity_chunks)
+        return RetrievalResult(
+            master_chunks=master_chunks,
+            activity_chunks=activity_chunks,
+            home_chunks=home_chunks,
+        )
