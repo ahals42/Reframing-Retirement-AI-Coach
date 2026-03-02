@@ -21,6 +21,7 @@ from qdrant_client.models import Distance, VectorParams
 
 from rag.config import RagConfig, load_rag_config
 from rag.parsing_activities import ActivityChunk, parse_activity_file
+from rag.parsing_home import HomeActivityChunk, parse_home_file
 from rag.parsing_master import MasterChunk, parse_master_file
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ def _stable_uuid(value: str) -> str:
     return str(uuid.uuid5(uuid.NAMESPACE_URL, value))
 
 
-def _to_nodes(chunks: Sequence[MasterChunk | ActivityChunk]) -> Sequence[TextNode]:
+def _to_nodes(chunks: Sequence[MasterChunk | ActivityChunk | HomeActivityChunk]) -> Sequence[TextNode]:
     return [
         TextNode(
             text=chunk.text,
@@ -74,14 +75,18 @@ def run_ingest() -> None:
     master_chunks = parse_master_file(config.master_data_path)
     logger.info("Parsing activity dataset from %s", config.activity_data_path)
     activity_chunks = parse_activity_file(config.activity_data_path)
+    logger.info("Parsing at-home dataset from %s", config.home_data_path)
+    home_chunks = parse_home_file(config.home_data_path)
 
     client = QdrantClient(url=config.qdrant_url, api_key=config.qdrant_api_key)
 
     _ensure_collection(client, config.master_collection, config.embedding_dimensions)
     _ensure_collection(client, config.activities_collection, config.embedding_dimensions)
+    _ensure_collection(client, config.home_collection, config.embedding_dimensions)
 
     _upsert_nodes(config, client, config.master_collection, _to_nodes(master_chunks))
     _upsert_nodes(config, client, config.activities_collection, _to_nodes(activity_chunks))
+    _upsert_nodes(config, client, config.home_collection, _to_nodes(home_chunks))
 
     logger.info("Ingestion complete.")
 

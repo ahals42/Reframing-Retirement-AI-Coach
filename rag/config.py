@@ -16,6 +16,7 @@ DATA_DIR = REPO_ROOT / "data"
 
 MASTER_FILENAME = "reframing_retirement_master_data_set.txt"
 ACTIVITY_FILENAME = "reframing_retirement_activity_list.txt"
+HOME_FILENAME = "What_Can_You_Do_At_Home_data_set.txt"
 
 EMBED_DIMENSIONS = {
     "text-embedding-3-large": 3072,
@@ -54,12 +55,15 @@ class RagConfig:
     embedding_dimensions: int
     master_collection: str
     activities_collection: str
+    home_collection: str
     qdrant_url: str
     qdrant_api_key: Optional[str]
     master_data_path: Path
     activity_data_path: Path
+    home_data_path: Path
     master_top_k: int = 5
     activity_top_k: int = 4
+    home_top_k: int = 4
 
 
 def load_rag_config() -> RagConfig:
@@ -75,12 +79,15 @@ def load_rag_config() -> RagConfig:
 
     master_collection = os.getenv("RR_MASTER_COLLECTION", "rr_master")
     activities_collection = os.getenv("RR_ACTIVITIES_COLLECTION", "rr_activities")
+    home_collection = os.getenv("RR_HOME_COLLECTION", "rr_home")
 
     master_data_path = _path_from_env("RR_MASTER_DATA_PATH", DATA_DIR / MASTER_FILENAME)
     activity_data_path = _path_from_env("RR_ACTIVITY_DATA_PATH", DATA_DIR / ACTIVITY_FILENAME)
+    home_data_path = _path_from_env("RR_HOME_DATA_PATH", DATA_DIR / HOME_FILENAME)
 
     master_top_k = _coerce_int(os.getenv("RR_MASTER_TOP_K"), 5)
     activity_top_k = _coerce_int(os.getenv("RR_ACTIVITY_TOP_K"), 4)
+    home_top_k = _coerce_int(os.getenv("RR_HOME_TOP_K"), 4)
 
     return RagConfig(
         openai_api_key=openai_api_key,
@@ -89,10 +96,13 @@ def load_rag_config() -> RagConfig:
         embedding_dimensions=embedding_dimensions,
         master_collection=master_collection,
         activities_collection=activities_collection,
+        home_collection=home_collection,
         qdrant_url=qdrant_url,
         qdrant_api_key=qdrant_api_key,
         master_data_path=master_data_path,
         activity_data_path=activity_data_path,
+        home_data_path=home_data_path,
         master_top_k=master_top_k,
         activity_top_k=activity_top_k,
+        home_top_k=home_top_k,
     )

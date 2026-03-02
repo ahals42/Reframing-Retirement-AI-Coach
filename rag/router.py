@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 DAY_PATTERN = re.compile(
     r"\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Weekend|Weekends?)\b",
@@ -57,7 +57,28 @@ LOCATION_HINTS = {
     "saanich": "saanich",
     "cedar hill": "cedar hill",
     "online": "online",
-    "home": "online",
+}
+
+HOME_KEYWORDS = [
+    "at home",
+    "at-home",
+    "home workout",
+    "home exercise",
+    "home activity",
+    "workout video",
+    "exercise video",
+    "fitness video",
+    "youtube",
+    "online workout video",
+    "video workout",
+    "from home",
+    "in my house",
+]
+
+HOME_RESOURCE_TYPE_KEYWORDS: Dict[str, List[str]] = {
+    "video": ["video", "watch", "youtube"],
+    "playlist": ["playlist", "series", "collection"],
+    "blog": ["blog", "article", "read", "reading"],
 }
 
 TYPE_KEYWORDS = {
@@ -99,6 +120,8 @@ class RouteDecision:
     activity_filters: Optional[ActivityFilters] = None
     needs_location_clarification: bool = False
     prefer_science: bool = False
+    use_home: bool = False
+    home_resource_type: Optional[str] = None
 
 
 class QueryRouter:
@@ -106,9 +129,33 @@ class QueryRouter:
 
     def route(self, user_input: str) -> RouteDecision:
         lowered = user_input.lower()
-        use_activities = any(keyword in lowered for keyword in ACTIVITY_KEYWORDS)
         prefer_science = any(keyword in lowered for keyword in SCIENCE_KEYWORDS)
 
+        # At-home detection takes priority over local activity routing
+        if any(keyword in lowered for keyword in HOME_KEYWORDS):
+            activity_filters = ActivityFilters()
+            for act_type, keywords in TYPE_KEYWORDS.items():
+                if any(keyword in lowered for keyword in keywords):
+                    activity_filters.activity_type = act_type
+                    break
+            if not activity_filters.has_filters():
+                activity_filters = None
+
+            home_resource_type = None
+            for res_type, keywords in HOME_RESOURCE_TYPE_KEYWORDS.items():
+                if any(keyword in lowered for keyword in keywords):
+                    home_resource_type = res_type
+                    break
+
+            return RouteDecision(
+                use_master=True,
+                use_home=True,
+                activity_filters=activity_filters,
+                prefer_science=prefer_science,
+                home_resource_type=home_resource_type,
+            )
+
+        use_activities = any(keyword in lowered for keyword in ACTIVITY_KEYWORDS)
         activity_filters = ActivityFilters()
 
         recognized_location = False
@@ -135,12 +182,10 @@ class QueryRouter:
         if not activity_filters.has_filters():
             activity_filters = None
 
-        route = RouteDecision(
+        return RouteDecision(
             use_master=True,
             use_activities=use_activities,
             activity_filters=activity_filters,
             needs_location_clarification=use_activities and not recognized_location,
             prefer_science=prefer_science,
         )
-
-        return route

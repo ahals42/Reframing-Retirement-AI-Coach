@@ -178,7 +178,7 @@ class CoachAgent:
             self._record_exchange(user_input, reply)
             yield reply
             return reply
-        if prepared.response_mode in {"lowest_mpac", "emotion_education", "educational", "source_request", "mpac_question"}:
+        if prepared.response_mode in {"lowest_mpac", "emotion_education", "educational", "source_request", "mpac_question", "home_resources"}:
             completion = self.client.chat.completions.create(
                 model=self.model,
                 temperature=self.temperature,
@@ -246,15 +246,17 @@ class CoachAgent:
                 decision = RouteDecision(
                     use_master=decision.use_master,
                     use_activities=decision.use_activities,
+                    use_home=decision.use_home,
                     activity_filters=decision.activity_filters,
                     needs_location_clarification=decision.needs_location_clarification,
                     prefer_science=True,
+                    home_resource_type=decision.home_resource_type,
                 )
             self._last_prefer_science = decision.prefer_science
             retrieval_result = self.retriever.gather_context(user_input, decision)
             context_block = retrieval_result.build_prompt_context() if retrieval_result else None
             self.latest_retrieval = retrieval_result
-            if retrieval_result and (retrieval_result.master_chunks or retrieval_result.activity_chunks):
+            if retrieval_result and (retrieval_result.master_chunks or retrieval_result.activity_chunks or retrieval_result.home_chunks):
                 self.last_retrieval_with_results = retrieval_result
 
         source_request = self._needs_citations(user_input)
@@ -270,9 +272,12 @@ class CoachAgent:
             decision=decision,
         )
 
+        home_request = decision.use_home if decision else False
+
         # Response mode routing determines coaching approach based on user state
         # - lowest_mpac: Educational only, no action suggestions (unmotivated users)
         # - mpac_question: Framework explanation grounded in science content
+        # - home_resources: At-home video/playlist/blog suggestions
         # - emotion_education: Educational support for negative feelings
         # - educational: Info-focused responses for explicit knowledge requests
         # - source_request: Concise response with citations
@@ -296,6 +301,17 @@ class CoachAgent:
                 "Ground your explanation in the retrieved science content where available. "
                 "Keep the response concise: 2-4 sentences, conversational, no bullet lists, no numbering, no bold. "
                 "After explaining, you may offer one natural follow-up connecting it to the user's own experience."
+            )
+        elif home_request:
+            response_mode = "home_resources"
+            response_instruction = (
+                "At-home resources routing: the user is asking about activities they can do at home. "
+                "Suggest 1-3 relevant at-home resources from the retrieved content. "
+                "For each suggestion, name it and tell the user they can find it in the Resources section "
+                "under 'What Can You Do At Home?' in the app menu — including the resource type and number "
+                "(e.g. 'Individual Video #16' or 'Blog #3'). "
+                "Keep the response conversational, no bullet lists, no bold. "
+                "You may ask one follow-up question about their preference (e.g. duration, intensity, resource type)."
             )
         elif emotion_regulation:
             response_mode = "emotion_education"
@@ -338,6 +354,9 @@ class CoachAgent:
         elif mpac_question:
             allow_module_references = True
             max_refs = 1
+        elif home_request:
+            allow_module_references = True
+            max_refs = 3
         elif emotion_regulation:
             allow_module_references = True
             max_refs = 1
@@ -493,6 +512,12 @@ class CoachAgent:
                 "You have access to retrieved science slides below. Use them to ground your explanation "
                 "of the M-PAC framework or the specific construct the user asked about. "
                 "Prioritise science content. Ignore local activities."
+            )
+        if response_mode == "home_resources":
+            return (
+                "You have access to retrieved at-home resources below. Suggest relevant ones by name "
+                "and tell the user they can find each one in the app under Resources > What Can You Do At Home?, "
+                "including the resource type and number. Ignore local activities and master slides."
             )
         if response_mode in {"emotion_education", "educational"}:
             return (
