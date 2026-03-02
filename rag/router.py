@@ -73,6 +73,15 @@ HOME_KEYWORDS = [
     "video workout",
     "from home",
     "in my house",
+    "blog",
+    "blogs",
+    "playlist",
+    "playlists",
+    "video playlist",
+    "video series",
+    "individual video",
+    "watch a workout",
+    "watch a video",
 ]
 
 HOME_RESOURCE_TYPE_KEYWORDS: Dict[str, List[str]] = {
@@ -148,7 +157,7 @@ class QueryRouter:
                     break
 
             return RouteDecision(
-                use_master=True,
+                use_master=False,
                 use_home=True,
                 activity_filters=activity_filters,
                 prefer_science=prefer_science,

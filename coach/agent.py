@@ -244,7 +244,7 @@ class CoachAgent:
             decision = self.router.route(user_input)
             if mpac_question:
                 decision = RouteDecision(
-                    use_master=decision.use_master,
+                    use_master=True,
                     use_activities=decision.use_activities,
                     use_home=decision.use_home,
                     activity_filters=decision.activity_filters,
