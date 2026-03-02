@@ -306,10 +306,12 @@ class CoachAgent:
             response_mode = "home_resources"
             response_instruction = (
                 "At-home resources routing: the user is asking about activities they can do at home. "
-                "Suggest 1-3 relevant at-home resources from the retrieved content. "
-                "For each suggestion, name it and tell the user they can find it in the Resources section "
-                "under 'What Can You Do At Home?' in the app menu — including the resource type and number "
-                "(e.g. 'Individual Video #16' or 'Blog #3'). "
+                "Suggest 1-3 relevant at-home resources from the retrieved content only — never invent or guess resources. "
+                "Introduce each one naturally using a phrase like: "
+                "'In the individual video section, #[N] is called [Name]' or "
+                "'In the blog section, #[N] is [Name]' or "
+                "'In the video playlist section, #[N] is [Name]'. "
+                "After naming it, tell the user they can find it in the app under Resources > What Can You Do At Home?. "
                 "Keep the response conversational, no bullet lists, no bold. "
                 "You may ask one follow-up question about their preference (e.g. duration, intensity, resource type)."
             )
@@ -515,9 +517,10 @@ class CoachAgent:
             )
         if response_mode == "home_resources":
             return (
-                "You have access to retrieved at-home resources below. Suggest relevant ones by name "
-                "and tell the user they can find each one in the app under Resources > What Can You Do At Home?, "
-                "including the resource type and number. Ignore local activities and master slides."
+                "You have access to retrieved at-home resources below. These are the ONLY resources you should mention — "
+                "do not say you lack resources if they appear in the list. For each suggestion, state its section type "
+                "(Individual Video, Video Playlist, or Blog), its number, and its name. "
+                "Do not reference local activities or lesson slides."
             )
         if response_mode in {"emotion_education", "educational"}:
             return (

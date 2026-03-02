@@ -225,9 +225,12 @@ class RagRetriever:
         return index.as_retriever(similarity_top_k=top_k)
 
     def retrieve_master(self, query: str, top_k: Optional[int] = None, *, prefer_science: bool = False) -> List[RetrievedChunk]:
-        retriever = self._build_retriever(self.master_index, top_k or self.config.master_top_k)
+        base_top_k = top_k or self.config.master_top_k
+        # Cast a wider net when prefer_science=True so science slides aren't crowded out by lesson slides
+        retrieval_top_k = base_top_k * 3 if prefer_science else base_top_k
+        retriever = self._build_retriever(self.master_index, retrieval_top_k)
         nodes = retriever.retrieve(query)
-        return [
+        chunks = [
             RetrievedChunk(
                 doc_type=node.node.metadata.get("doc_type", "master"),
                 text=_node_content(node.node),
@@ -238,6 +241,10 @@ class RagRetriever:
             if not node.node.metadata.get("do_not_reference", False)
             and (prefer_science or node.node.metadata.get("content_type") != "science")
         ]
+        if prefer_science:
+            # Sort science slides first, then by score descending, before truncating
+            chunks.sort(key=lambda c: (0 if c.metadata.get("content_type") == "science" else 1, -(c.score or 0.0)))
+        return chunks[:base_top_k]
 
     def retrieve_activities(
         self,
