@@ -317,7 +317,10 @@ class RagRetriever:
         if activity_type:
             chunks = [c for c in chunks if c.metadata.get("activity_type") == activity_type]
         if resource_type:
-            chunks = [c for c in chunks if c.metadata.get("resource_type") == resource_type]
+            resource_filtered = [c for c in chunks if c.metadata.get("resource_type") == resource_type]
+            if resource_filtered:
+                chunks = resource_filtered
+            # else: fall back to activity_type results (e.g. yoga exists only as a blog, not a video)
         return chunks[:base_top_k]
 
     def gather_context(self, query: str, decision: RouteDecision) -> RetrievalResult:
