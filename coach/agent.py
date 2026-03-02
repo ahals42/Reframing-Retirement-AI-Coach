@@ -39,6 +39,7 @@ from .detection.detectors import (
     detect_module_request,
     detect_lesson_lookup,
     detect_educational_use_case,
+    detect_mpac_question,
     detect_sources_only,
     detect_lesson_overview_request,
     detect_technical_support_request,
@@ -177,7 +178,7 @@ class CoachAgent:
             self._record_exchange(user_input, reply)
             yield reply
             return reply
-        if prepared.response_mode in {"lowest_mpac", "emotion_education", "educational", "source_request"}:
+        if prepared.response_mode in {"lowest_mpac", "emotion_education", "educational", "source_request", "mpac_question"}:
             completion = self.client.chat.completions.create(
                 model=self.model,
                 temperature=self.temperature,
@@ -238,8 +239,17 @@ class CoachAgent:
         routing_instruction: Optional[str] = None
         decision: Optional[RouteDecision] = None
         sources_only_followup = detect_sources_only(user_input)
+        mpac_question = detect_mpac_question(user_input)
         if self.retriever and not sources_only_followup:
             decision = self.router.route(user_input)
+            if mpac_question:
+                decision = RouteDecision(
+                    use_master=decision.use_master,
+                    use_activities=decision.use_activities,
+                    activity_filters=decision.activity_filters,
+                    needs_location_clarification=decision.needs_location_clarification,
+                    prefer_science=True,
+                )
             self._last_prefer_science = decision.prefer_science
             retrieval_result = self.retriever.gather_context(user_input, decision)
             context_block = retrieval_result.build_prompt_context() if retrieval_result else None
@@ -262,6 +272,7 @@ class CoachAgent:
 
         # Response mode routing determines coaching approach based on user state
         # - lowest_mpac: Educational only, no action suggestions (unmotivated users)
+        # - mpac_question: Framework explanation grounded in science content
         # - emotion_education: Educational support for negative feelings
         # - educational: Info-focused responses for explicit knowledge requests
         # - source_request: Concise response with citations
@@ -276,6 +287,15 @@ class CoachAgent:
                 "Never use question marks. Output format: 1-3 sentences total, conversational, no bullet lists, no numbering, no bold. "
                 "Sentence 1 should neutrally acknowledge the feeling or hesitation. Sentence 2 should explain health relevance in plain language. "
                 "If a relevant slide is available, add one final sentence that points to at most two slides as module support."
+            )
+        elif mpac_question:
+            response_mode = "mpac_question"
+            response_instruction = (
+                "MPAC-framework routing: the user is asking directly about the M-PAC framework or one of its "
+                "named constructs. You MAY mention M-PAC, its layer names, and its construct names in this response. "
+                "Ground your explanation in the retrieved science content where available. "
+                "Keep the response concise: 2-4 sentences, conversational, no bullet lists, no numbering, no bold. "
+                "After explaining, you may offer one natural follow-up connecting it to the user's own experience."
             )
         elif emotion_regulation:
             response_mode = "emotion_education"
@@ -315,6 +335,9 @@ class CoachAgent:
             allow_module_references = True
             max_refs = 2
             prefer_early_lessons = True
+        elif mpac_question:
+            allow_module_references = True
+            max_refs = 1
         elif emotion_regulation:
             allow_module_references = True
             max_refs = 1
@@ -464,6 +487,12 @@ class CoachAgent:
                 "You have access to retrieved slides/activities below. Use only slide content that directly "
                 "addresses the user's question. Ignore local activities unless the user explicitly asked for them. "
                 "If the content is not helpful, briefly say so before proceeding."
+            )
+        if response_mode == "mpac_question":
+            return (
+                "You have access to retrieved science slides below. Use them to ground your explanation "
+                "of the M-PAC framework or the specific construct the user asked about. "
+                "Prioritise science content. Ignore local activities."
             )
         if response_mode in {"emotion_education", "educational"}:
             return (

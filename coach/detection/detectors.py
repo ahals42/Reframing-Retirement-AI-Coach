@@ -13,6 +13,7 @@ from ..inference import (
     MODULE_REQUEST_PATTERNS,
     LESSON_LOOKUP_PATTERNS,
     EDUCATIONAL_REQUEST_PATTERNS,
+    MPAC_QUESTION_PATTERNS,
     SOURCE_REQUEST_PATTERNS,
     TECHNICAL_SUPPORT_PATTERNS,
     extract_lesson_number,
@@ -72,6 +73,12 @@ def detect_educational_use_case(text: str, *, explicit_module_request: bool, dec
         return False
     lowered = text.lower()
     return _contains_patterns(lowered, EDUCATIONAL_REQUEST_PATTERNS)
+
+
+def detect_mpac_question(text: str) -> bool:
+    """Detect if user is explicitly asking about the M-PAC framework or its named constructs."""
+    lowered = text.lower()
+    return _contains_patterns(lowered, MPAC_QUESTION_PATTERNS)
 
 
 def detect_lesson_overview_request(text: str) -> Optional[int]:
