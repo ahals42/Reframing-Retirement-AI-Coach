@@ -127,6 +127,37 @@ EDUCATIONAL_REQUEST_PATTERNS: List[Pattern] = [
     re.compile(r"\btell me about\b.*\b(physical activity|exercise|movement|being active)\b", re.IGNORECASE),
 ]
 
+# Patterns for detecting explicit MPAC framework questions
+MPAC_QUESTION_PATTERNS: List[Pattern] = [
+    # Direct acronym/name
+    re.compile(r"\bM-?PAC\b", re.IGNORECASE),
+    re.compile(r"\bmulti[\s-]?process\s+action\s+control\b", re.IGNORECASE),
+
+    # Initiating reflective constructs
+    re.compile(r"\bperceived\s+capabilit(?:y|ies)\b", re.IGNORECASE),
+    re.compile(r"\binstrumental\s+attitude\b", re.IGNORECASE),
+
+    # Ongoing reflective constructs
+    re.compile(r"\baffective\s+(?:judgment|judgement|attitude|appraisal)\b", re.IGNORECASE),
+    re.compile(r"\bperceived\s+opportunit(?:y|ies)\b", re.IGNORECASE),
+
+    # Regulatory constructs
+    re.compile(r"\bregulatory\s+(?:phase|control|process)\b", re.IGNORECASE),
+    re.compile(r"\bcognitive\s+regulation\b", re.IGNORECASE),
+    re.compile(r"\bemotional\s+regulation\b.{0,60}\b(?:mpac|model|framework|phase|layer)\b", re.IGNORECASE),
+
+    # Reflexive constructs — anchored to avoid false matches in normal conversation
+    re.compile(r"\breflexive\s+(?:layer|phase|process|habit)\b", re.IGNORECASE),
+    re.compile(r"\bidentity[\s-]based\s+(?:habit|motivation|behavior|behaviour)\b", re.IGNORECASE),
+
+    # Initiating/ongoing reflective layer names
+    re.compile(r"\b(?:initiating|ongoing)\s+reflective\b", re.IGNORECASE),
+    re.compile(r"\breflective\s+(?:layer|phase|process|stage)\b", re.IGNORECASE),
+
+    # "What is/explain the behaviour change model/framework"
+    re.compile(r"\b(?:explain|describe|tell me about|what is|how does)\b.{0,50}\b(?:behavior change model|behaviour change model|action control model|action control framework)\b", re.IGNORECASE),
+]
+
 MODULE_REQUEST_PATTERNS: List[Pattern] = [
     re.compile(r"\bmodule\b", re.IGNORECASE),
     re.compile(r"\blesson\s+\d+\b", re.IGNORECASE),
