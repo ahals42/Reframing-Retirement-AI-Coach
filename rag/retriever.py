@@ -133,25 +133,23 @@ class RetrievedChunk:
                 module_title = re.sub(r"\s*\(\d+\s*slides?\)", "", module_title).strip()
                 slide = self.metadata.get("science_slide_number")
                 slide_title = self.metadata.get("slide_title") or "Untitled slide"
-                return f"{module_title} -> Slide {slide} ({slide_title})"
+                return f"Science Module {module}, Slide {slide}: {slide_title}"
             lesson = self.metadata.get("lesson_number")
-            lesson_title = self.metadata.get("lesson_title") or "Untitled lesson"
             slide = self.metadata.get("slide_number")
             slide_title = self.metadata.get("slide_title") or "Untitled slide"
-            return f"Lesson {lesson}: {lesson_title} -> Slide {slide} ({slide_title})"
+            return f"Lesson {lesson}, Slide {slide}: {slide_title}"
         if self.doc_type == "activity":
-            activity_id = self.metadata.get("activity_id")
             name = self.metadata.get("activity_name", "Activity")
             location = self.metadata.get("location", "Location TBD")
             schedule = self.metadata.get("schedule", "Schedule TBD")
             cost = self.metadata.get("cost_raw", "Cost unknown")
-            return f"Activity {activity_id}: {name} — {location}, {schedule}, {cost}"
+            return f"{name} at {location} — {schedule}, {cost}"
         if self.doc_type == "home_activity":
             resource_type = self.metadata.get("resource_type", "resource")
             ref_num = self.metadata.get("ref_number", "?")
             name = self.metadata.get("activity_name", "Activity")
             type_label = {"video": "Individual Video", "playlist": "Video Playlist", "blog": "Blog"}.get(resource_type, "Resource")
-            return f"{type_label} #{ref_num}: {name}"
+            return f"{type_label} {ref_num}: {name}"
         return None
 
 
