@@ -308,9 +308,9 @@ class CoachAgent:
                 "At-home resources routing: the user is asking about activities they can do at home. "
                 "Suggest 1-3 relevant at-home resources from the retrieved content only — never invent or guess resources. "
                 "Introduce each one naturally using a phrase like: "
-                "'In the individual video section, #[N] is called [Name]' or "
-                "'In the blog section, #[N] is [Name]' or "
-                "'In the video playlist section, #[N] is [Name]'. "
+                "'In the individual video section, number [N] is called [Name]' or "
+                "'In the blog section, number [N] is [Name]' or "
+                "'In the video playlist section, number [N] is [Name]'. "
                 "After naming it, tell the user they can find it in the app under Resources > What Can You Do At Home?. "
                 "Keep the response conversational, no bullet lists, no bold. "
                 "You may ask one follow-up question about their preference (e.g. duration, intensity, resource type)."
@@ -714,7 +714,8 @@ class CoachAgent:
         limited = references[:max_refs]
         if limited:
             module_block = "\n\n".join(f"- {ref}" for ref in limited)
-            return f"{base_text}\n\nFrom your modules, you can find more detail at:\n{module_block}"
+            prefix = f"{base_text}\n\n" if base_text else ""
+            return f"{prefix}From your modules, you can find more detail at:\n{module_block}"
         fallback_msg = (
             "I couldn't find a specific slide to cite for that. "
             "If you can share more detail about what you'd like to know, I can point to a specific lesson."
