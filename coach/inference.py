@@ -238,6 +238,22 @@ TECHNICAL_SUPPORT_RESPONSE = (
     "in your message so we can help."
 )
 
+CHATBOT_HELP_PATTERNS: List[Pattern] = [
+    re.compile(r"\bwhat\s+can\s+(you|this\s+(bot|chatbot|assistant|coach))\s+(do|help\s+with)\b", re.IGNORECASE),
+    re.compile(r"\bwhat\s+are\s+your\s+(features?|capabilities|functions?|abilities)\b", re.IGNORECASE),
+    re.compile(r"\bhow\s+do(es)?\s+(this|the)\s+(chatbot|bot|assistant|coach|app)\s+work\b", re.IGNORECASE),
+    re.compile(r"\bwhat\s+(topics?|things?)\s+can\s+(you|this)\s+(help|cover|discuss|talk\s+about)\b", re.IGNORECASE),
+    re.compile(r"\bhow\s+(should\s+i|do\s+i|can\s+i)\s+use\s+(you|this\s+(chatbot|bot|assistant|coach))\b", re.IGNORECASE),
+    re.compile(r"\b(guide|instructions?|tutorial)\s+(for|on|to\s+use)\s+(the\s+)?(chatbot|bot|assistant|coach)\b", re.IGNORECASE),
+    re.compile(r"\bwhat\s+questions?\s+can\s+i\s+ask\b", re.IGNORECASE),
+    re.compile(r"\bhelp\s+me\s+use\s+(you|this|the\s+(chatbot|bot|assistant|coach))\b", re.IGNORECASE),
+]
+
+CHATBOT_HELP_RESPONSE = (
+    "For a full guide on how to use the coaching assistant, check out the Resources section in the app "
+    "and look for the Chatbot Help guide."
+)
+
 # Patterns for detecting emotional regulation needs
 EMOTION_STRONG_PATTERNS: List[Pattern] = [
     re.compile(r"\b(stress|stressed|stressful)\s+(about|around)\s+(exercise|activity|moving|movement|being active)\b", re.IGNORECASE),

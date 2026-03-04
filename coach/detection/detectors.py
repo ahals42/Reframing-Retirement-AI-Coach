@@ -16,6 +16,7 @@ from ..inference import (
     MPAC_QUESTION_PATTERNS,
     SOURCE_REQUEST_PATTERNS,
     TECHNICAL_SUPPORT_PATTERNS,
+    CHATBOT_HELP_PATTERNS,
     extract_lesson_number,
 )
 from ..constants import ACTIVITY_CONTEXT_KEYWORDS
@@ -89,6 +90,11 @@ def detect_lesson_overview_request(text: str) -> Optional[int]:
 def detect_technical_support_request(text: str) -> bool:
     """Detect if user is asking a technical support question about the app or devices."""
     return _contains_patterns(text, TECHNICAL_SUPPORT_PATTERNS)
+
+
+def detect_chatbot_help_request(text: str) -> bool:
+    """Detect if user is asking what the chatbot can do or how to use it."""
+    return _contains_patterns(text, CHATBOT_HELP_PATTERNS)
 
 
 def detect_sources_only(text: str) -> bool:

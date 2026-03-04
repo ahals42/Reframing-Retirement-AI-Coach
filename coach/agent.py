@@ -43,8 +43,9 @@ from .detection.detectors import (
     detect_sources_only,
     detect_lesson_overview_request,
     detect_technical_support_request,
+    detect_chatbot_help_request,
 )
-from .inference import TECHNICAL_SUPPORT_RESPONSE
+from .inference import TECHNICAL_SUPPORT_RESPONSE, CHATBOT_HELP_RESPONSE
 
 logger = logging.getLogger(__name__)
 
@@ -411,6 +412,9 @@ class CoachAgent:
         if detect_technical_support_request(user_input):
             override_text = TECHNICAL_SUPPORT_RESPONSE
             override_citations = True
+        if detect_chatbot_help_request(user_input):
+            override_text = CHATBOT_HELP_RESPONSE
+            override_citations = True
         lesson_overview_num = detect_lesson_overview_request(user_input)
         if lesson_overview_num is not None and lesson_overview_num in self.lesson_overviews:
             overview = self.lesson_overviews[lesson_overview_num]
@@ -532,6 +536,7 @@ class CoachAgent:
             "You have access to retrieved slides/activities below. When relevant, ground your answer in them. "
             "Respond in a conversational tone using a maximum of three sentences total; no bullet lists or numbered lists. "
             "If the retrieved context includes local activities, mention at least one concrete option by name (with location or schedule) before any reflective coaching. "
+            "When mentioning a local activity, tell the user they can find local activities in the app under Resources > What is going on in your area?. "
             "If the content is not helpful, briefly say so before proceeding without it."
         )
 
