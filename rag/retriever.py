@@ -222,22 +222,28 @@ class RagRetriever:
     def _build_retriever(self, index: VectorStoreIndex, top_k: int) -> VectorIndexRetriever:
         return index.as_retriever(similarity_top_k=top_k)
 
-    def retrieve_master(self, query: str, top_k: Optional[int] = None, *, prefer_science: bool = False) -> List[RetrievedChunk]:
-        base_top_k = top_k or self.config.master_top_k
-        # Cast a wider net when prefer_science=True so science slides aren't crowded out by lesson slides
-        retrieval_top_k = base_top_k * 3 if prefer_science else base_top_k
-        retriever = self._build_retriever(self.master_index, retrieval_top_k)
-        nodes = retriever.retrieve(query)
-        chunks = [
+    def _retrieve_chunks(self, index: VectorStoreIndex, query: str, top_k: int, default_doc_type: str) -> List[RetrievedChunk]:
+        """Retrieve nodes from an index and wrap them into RetrievedChunk objects."""
+        nodes = self._build_retriever(index, top_k).retrieve(query)
+        return [
             RetrievedChunk(
-                doc_type=node.node.metadata.get("doc_type", "master"),
+                doc_type=node.node.metadata.get("doc_type", default_doc_type),
                 text=_node_content(node.node),
                 metadata=node.node.metadata,
                 score=node.score,
             )
             for node in nodes
-            if not node.node.metadata.get("do_not_reference", False)
-            and (prefer_science or node.node.metadata.get("content_type") != "science")
+        ]
+
+    def retrieve_master(self, query: str, top_k: Optional[int] = None, *, prefer_science: bool = False) -> List[RetrievedChunk]:
+        base_top_k = top_k or self.config.master_top_k
+        # Cast a wider net when prefer_science=True so science slides aren't crowded out by lesson slides
+        retrieval_top_k = base_top_k * 3 if prefer_science else base_top_k
+        chunks = self._retrieve_chunks(self.master_index, query, retrieval_top_k, "master")
+        chunks = [
+            c for c in chunks
+            if not c.metadata.get("do_not_reference", False)
+            and (prefer_science or c.metadata.get("content_type") != "science")
         ]
         if prefer_science:
             # Sort science slides first, then by score descending, before truncating
@@ -253,21 +259,10 @@ class RagRetriever:
     ) -> List[RetrievedChunk]:
         base_top_k = top_k or self.config.activity_top_k
         retrieval_top_k = max(base_top_k * 2, 8) if filters and filters.days else base_top_k
-        retriever = self._build_retriever(self.activity_index, retrieval_top_k)
-
-        nodes = retriever.retrieve(query)
-        wrapped = [
-            RetrievedChunk(
-                doc_type=node.node.metadata.get("doc_type", "activity"),
-                text=_node_content(node.node),
-                metadata=node.node.metadata,
-                score=node.score,
-            )
-            for node in nodes
-        ]
+        chunks = self._retrieve_chunks(self.activity_index, query, retrieval_top_k, "activity")
         if filters:
-            wrapped = self._apply_activity_filters(wrapped, filters)
-        return wrapped[:base_top_k]
+            chunks = self._apply_activity_filters(chunks, filters)
+        return chunks[:base_top_k]
 
     def _apply_activity_filters(self, chunks: List[RetrievedChunk], filters: ActivityFilters) -> List[RetrievedChunk]:
         def matches(chunk: RetrievedChunk) -> bool:
@@ -301,17 +296,7 @@ class RagRetriever:
         top_k: Optional[int] = None,
     ) -> List[RetrievedChunk]:
         base_top_k = top_k or self.config.home_top_k
-        retriever = self._build_retriever(self.home_index, base_top_k)
-        nodes = retriever.retrieve(query)
-        chunks = [
-            RetrievedChunk(
-                doc_type=node.node.metadata.get("doc_type", "home_activity"),
-                text=_node_content(node.node),
-                metadata=node.node.metadata,
-                score=node.score,
-            )
-            for node in nodes
-        ]
+        chunks = self._retrieve_chunks(self.home_index, query, base_top_k, "home_activity")
         if activity_type:
             chunks = [c for c in chunks if c.metadata.get("activity_type") == activity_type]
         if resource_type:

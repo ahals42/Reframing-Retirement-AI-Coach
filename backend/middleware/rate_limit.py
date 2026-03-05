@@ -24,6 +24,13 @@ from slowapi.util import get_remote_address
 
 logger = logging.getLogger(__name__)
 
+_KEY_PREFIX_LENGTH = 12
+
+
+def _api_key_prefix(api_key: str) -> str:
+    """Return the first 12 chars of an API key (enough to differentiate keys)."""
+    return api_key[:_KEY_PREFIX_LENGTH] if len(api_key) >= _KEY_PREFIX_LENGTH else api_key
+
 
 def get_rate_limit_key(request: Request) -> str:
     """
@@ -38,13 +45,8 @@ def get_rate_limit_key(request: Request) -> str:
     Returns:
         Rate limit key (API key hash or IP address)
     """
-    # If request has been authenticated, use API key for rate limiting
     if hasattr(request.state, "api_key") and request.state.api_key:
-        # Use first 12 chars of API key as identifier (enough to differentiate)
-        api_key_prefix = request.state.api_key[:12] if len(request.state.api_key) >= 12 else request.state.api_key
-        return f"api_key:{api_key_prefix}"
-
-    # Fallback to IP-based limiting for unauthenticated endpoints
+        return f"api_key:{_api_key_prefix(request.state.api_key)}"
     return get_remote_address(request)
 
 
@@ -59,9 +61,7 @@ def get_session_count_key(request: Request) -> str:
         Session count tracking key
     """
     if hasattr(request.state, "api_key") and request.state.api_key:
-        api_key_prefix = request.state.api_key[:12] if len(request.state.api_key) >= 12 else request.state.api_key
-        return f"sessions:{api_key_prefix}"
-
+        return f"sessions:{_api_key_prefix(request.state.api_key)}"
     return f"sessions:{get_remote_address(request)}"
 
 

@@ -49,6 +49,17 @@ from .inference import TECHNICAL_SUPPORT_RESPONSE, CHATBOT_HELP_RESPONSE
 
 logger = logging.getLogger(__name__)
 
+# Compiled once at import time — used in _validate_input() on every message
+_INJECTION_PATTERNS: List[Pattern] = [
+    re.compile(r"ignore\s+(?:all\s+)?(?:previous|above|prior)\s+(?:instructions|prompts?|commands?)", re.IGNORECASE),
+    re.compile(r"disregard\s+(?:all\s+)?(?:previous|above|prior)\s+(?:instructions|prompts?)", re.IGNORECASE),
+    re.compile(r"new\s+instructions?:", re.IGNORECASE),
+    re.compile(r"system\s+prompt:", re.IGNORECASE),
+    re.compile(r"you\s+are\s+now\s+(?:a|an)", re.IGNORECASE),
+    re.compile(r"\[SYSTEM\]", re.IGNORECASE),
+    re.compile(r"\[ADMIN\]", re.IGNORECASE),
+]
+
 
 class CoachAgent:
     """Handles conversation state, prompting, and OpenAI calls."""
@@ -111,19 +122,8 @@ class CoachAgent:
             logger.warning(f"Input too long: {len(user_input)} chars (max: {MAX_INPUT_LENGTH})")
             raise ValueError(f"Input too long. Maximum {MAX_INPUT_LENGTH} characters allowed.")
 
-        # Basic prompt injection detection - compiled at function level for thread safety
-        # These patterns detect attempts to manipulate the system prompt
-        dangerous_patterns: List[Pattern] = [
-            re.compile(r"ignore\s+(?:all\s+)?(?:previous|above|prior)\s+(?:instructions|prompts?|commands?)", re.IGNORECASE),
-            re.compile(r"disregard\s+(?:all\s+)?(?:previous|above|prior)\s+(?:instructions|prompts?)", re.IGNORECASE),
-            re.compile(r"new\s+instructions?:", re.IGNORECASE),
-            re.compile(r"system\s+prompt:", re.IGNORECASE),
-            re.compile(r"you\s+are\s+now\s+(?:a|an)", re.IGNORECASE),
-            re.compile(r"\[SYSTEM\]", re.IGNORECASE),
-            re.compile(r"\[ADMIN\]", re.IGNORECASE),
-        ]
-
-        for pattern in dangerous_patterns:
+        # Basic prompt injection detection — patterns compiled at module level
+        for pattern in _INJECTION_PATTERNS:
             if pattern.search(user_input):
                 logger.warning(f"Potential prompt injection detected: {pattern.pattern}")
                 # Don't reject - just log and continue
