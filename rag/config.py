@@ -39,9 +39,9 @@ def _coerce_int(value: Optional[str], fallback: int) -> int:
 
 
 def _read_openai_key() -> str:
-    key = os.getenv("OPENAI_API_key") or os.getenv("OPENAI_API_KEY")
+    key = os.getenv("OPENAI_API_KEY")
     if not key:
-        raise ValueError("Set OPENAI_API_key (preferred) or OPENAI_API_KEY in your environment.")
+        raise ValueError("Set OPENAI_API_KEY in your environment.")
     return key
 
 

@@ -45,7 +45,7 @@ try:
     retriever = RagRetriever(config)
     run_rag_sanity_check(retriever)
 except Exception as exc:
-    print(f"[Warning] RAG initialization failed: {exc}. Continuing without vector context.")
+    logger.warning(f"RAG initialization failed: {exc}. Continuing without vector context.")
 
 
 def _agent_factory() -> CoachAgent:

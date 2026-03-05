@@ -43,3 +43,6 @@ docs/refs/
 
 # python file for creating flow charts
 _gen_diagrams.py
+
+# Local-only update logs
+updates/

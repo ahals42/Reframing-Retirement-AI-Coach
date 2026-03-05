@@ -29,8 +29,8 @@ init();
 setupVoiceControls();
 
 async function init() {
-  // Check for stored API key or prompt for one
-  apiKey = sessionStorage.getItem("rr-api-key");
+  // API key is kept in memory only — never written to sessionStorage/localStorage
+  // to avoid exposure via XSS attacks.
   if (!apiKey) {
     apiKey = await promptForApiKey();
     if (!apiKey) {
@@ -38,7 +38,6 @@ async function init() {
       disableInput();
       return;
     }
-    sessionStorage.setItem("rr-api-key", apiKey);
   }
 
   sessionId = sessionStorage.getItem("rr-session");
@@ -47,8 +46,8 @@ async function init() {
       sessionId = await createSession();
       sessionStorage.setItem("rr-session", sessionId);
     } catch (err) {
-      // Invalid API key - clear it and prompt again
-      sessionStorage.removeItem("rr-api-key");
+      // Invalid API key — clear in-memory key so next init() re-prompts
+      apiKey = null;
       appendBotBubble("Invalid access key. Please refresh the page and try again.");
       disableInput();
       return;
@@ -104,6 +103,8 @@ resetButton.addEventListener("click", async () => {
     });
   }
   sessionStorage.removeItem("rr-session");
+  sessionId = null;
+  apiKey = null;
   clearChat();
   await init();
 });

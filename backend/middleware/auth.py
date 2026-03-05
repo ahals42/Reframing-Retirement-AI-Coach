@@ -27,7 +27,6 @@ from typing import Optional, List
 from functools import wraps
 
 from fastapi import Request, HTTPException, status
-from fastapi.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
 
