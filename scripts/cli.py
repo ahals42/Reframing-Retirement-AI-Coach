@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -9,6 +11,8 @@ from coach import CoachAgent, run_rag_sanity_check
 from rag.config import load_rag_config
 from rag.retriever import RagRetriever
 from rag.router import QueryRouter
+
+logger = logging.getLogger(__name__)
 
 
 def build_agent() -> CoachAgent:
@@ -22,7 +26,7 @@ def build_agent() -> CoachAgent:
         retriever = RagRetriever(config)
         run_rag_sanity_check(retriever)
     except Exception as exc:
-        print(f"[Warning] RAG initialization failed: {exc}. Continuing without vector context.")
+        logger.warning(f"RAG initialization failed: {exc}. Continuing without vector context.")
 
     return CoachAgent(client=client, model=config.chat_model, retriever=retriever, router=router)
 

@@ -113,7 +113,7 @@ def create_voice_router(session_store: InMemorySessionStore, client: OpenAI) -> 
             transcript = transcribe_audio(client, audio_bytes, filename)
         except Exception as exc:
             logger.error(f"Failed to transcribe audio for session {session_id}: {exc}")
-            raise HTTPException(status_code=500, detail="Unable to transcribe audio.") from exc
+            raise HTTPException(status_code=500, detail="Unable to transcribe audio") from exc
 
         transcript = transcript.strip()
 
@@ -135,14 +135,14 @@ def create_voice_router(session_store: InMemorySessionStore, client: OpenAI) -> 
             reply_text = record.agent.generate_response(transcript)
         except Exception as exc:
             logger.error(f"Failed to generate response for session {session_id}: {exc}")
-            raise HTTPException(status_code=500, detail="Unable to generate a reply.") from exc
+            raise HTTPException(status_code=500, detail="Unable to generate a reply") from exc
 
         # Synthesize speech response
         try:
             reply_audio_bytes, reply_mime = synthesize_speech(client, reply_text)
         except Exception as exc:
             logger.error(f"Failed to synthesize speech for session {session_id}: {exc}")
-            raise HTTPException(status_code=500, detail="Unable to synthesize speech.") from exc
+            raise HTTPException(status_code=500, detail="Unable to synthesize speech") from exc
 
         # Encode audio as base64 for JSON response
         reply_audio = base64.b64encode(reply_audio_bytes).decode("ascii")

@@ -211,6 +211,12 @@ class RagRetriever:
         self.config = config
         Settings.embed_model = OpenAIEmbedding(model=config.embedding_model, api_key=config.openai_api_key)
         self.client = QdrantClient(url=config.qdrant_url, api_key=config.qdrant_api_key)
+        # Validate Qdrant is reachable before building indexes
+        try:
+            self.client.get_collections()
+            logger.info(f"Qdrant connection verified at {config.qdrant_url}")
+        except Exception as exc:
+            raise RuntimeError(f"Cannot connect to Qdrant at {config.qdrant_url}: {exc}") from exc
         self.master_index = self._build_index(config.master_collection)
         self.activity_index = self._build_index(config.activities_collection)
         self.home_index = self._build_index(config.home_collection)
