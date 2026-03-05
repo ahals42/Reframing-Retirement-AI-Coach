@@ -1,41 +1,26 @@
 """
 Rate Limiting Middleware for FastAPI
 
-This module provides rate limiting functionality using slowapi (compatible with Flask-Limiter).
-Implements per-API-key rate limits for different endpoint types.
+Implements per-API-key rate limits using slowapi.
 
 Rate Limit Tiers:
 - Message endpoints: 500 requests/hour per API key
-- Voice endpoints: 15 concurrent streams per API key
 - Session creation: 60 sessions/hour per API key
 - Health check: No limits (for monitoring)
 
-Security Features:
-- Per-API-key tracking (not just IP-based)
-- Token usage budgets
-- Concurrent request limits for streaming
-- 429 Too Many Requests responses with retry-after headers
-
 Usage:
-    from backend.middleware.rate_limit import limiter, get_rate_limit_key
+    from backend.middleware.rate_limit import limiter, RATE_LIMITS
 
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
-    @app.post("/sessions/{session_id}/messages")
-    @limiter.limit("100/hour", key_func=get_rate_limit_key)
-    async def send_message(request: Request, session_id: str):
-        return {"message": "ok"}
 """
 
 import os
 import logging
-from typing import Optional
 
-from fastapi import Request, HTTPException, status
+from fastapi import Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
 
 logger = logging.getLogger(__name__)
 
@@ -96,164 +81,10 @@ RATE_LIMITS = {
 }
 
 
-def check_session_limit(request: Request, max_sessions: int = 50) -> bool:
-    """
-    Check if API key has exceeded maximum active sessions.
-
-    This is a placeholder for session count tracking. In production, this should
-    be implemented with a proper session store that tracks sessions per API key.
-
-    Args:
-        request: FastAPI request object
-        max_sessions: Maximum allowed active sessions
-
-    Returns:
-        True if under limit, False if limit exceeded
-    """
-    
-    return True
-
-
-def check_concurrent_streams(request: Request, max_concurrent: int = 10) -> bool:
-    """
-    Check if API key has exceeded maximum concurrent streams.
-
-    This is a placeholder for concurrent stream tracking. In production, this should
-    use a counter in Redis or similar to track active streaming connections.
-
-    Args:
-        request: FastAPI request object
-        max_concurrent: Maximum allowed concurrent streams
-
-    Returns:
-        True if under limit, False if limit exceeded
-    """
-
-    return True
-
-
-class SessionLimitExceeded(Exception):
-    """Exception raised when session creation limit is exceeded."""
-    pass
-
-
-class ConcurrentStreamLimitExceeded(Exception):
-    """Exception raised when concurrent stream limit is exceeded."""
-    pass
-
-
-def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
-    """
-    Custom handler for rate limit exceeded responses.
-
-    Args:
-        request: FastAPI request object
-        exc: RateLimitExceeded exception
-
-    Returns:
-        JSONResponse with 429 status code
-    """
-    logger.warning(
-        f"Rate limit exceeded for {request.method} {request.url.path} "
-        f"from {request.client.host if request.client else 'unknown'}"
-    )
-
-    return HTTPException(
-        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-        detail={
-            "error": "rate_limit_exceeded",
-            "message": "Too many requests. Please slow down.",
-            "retry_after": getattr(exc, "retry_after", 60)
-        },
-        headers={
-            "Retry-After": str(getattr(exc, "retry_after", 60))
-        }
-    )
-
-
-# Token usage tracking (placeholder for cost control)
-class TokenUsageTracker:
-    """
-    Track token usage per API key for budget enforcement.
-
-    In production, this should use a persistent store (Redis, database)
-    to track usage across application restarts and multiple instances.
-    """
-
-    def __init__(self):
-        """Initialize token usage tracker."""
-        self._usage = {}  # api_key -> token_count
-        self._budgets = {}  # api_key -> max_tokens
-
-    def record_usage(self, api_key: str, tokens: int):
-        """
-        Record token usage for an API key.
-
-        Args:
-            api_key: The API key
-            tokens: Number of tokens used
-        """
-        if api_key not in self._usage:
-            self._usage[api_key] = 0
-        self._usage[api_key] += tokens
-
-        logger.info(f"Token usage for API key {api_key[:8]}...: {self._usage[api_key]} tokens")
-
-    def set_budget(self, api_key: str, max_tokens: int):
-        """
-        Set token budget for an API key.
-
-        Args:
-            api_key: The API key
-            max_tokens: Maximum allowed tokens
-        """
-        self._budgets[api_key] = max_tokens
-
-    def check_budget(self, api_key: str) -> bool:
-        """
-        Check if API key is within budget.
-
-        Args:
-            api_key: The API key
-
-        Returns:
-            True if under budget, False if exceeded
-        """
-        if api_key not in self._budgets:
-            return True  # No budget set
-
-        usage = self._usage.get(api_key, 0)
-        budget = self._budgets[api_key]
-
-        return usage < budget
-
-    def get_usage(self, api_key: str) -> int:
-        """
-        Get current token usage for an API key.
-
-        Args:
-            api_key: The API key
-
-        Returns:
-            Total tokens used
-        """
-        return self._usage.get(api_key, 0)
-
-
-# Global token usage tracker
-token_tracker = TokenUsageTracker()
-
-
 # Export public API
 __all__ = [
     "limiter",
     "get_rate_limit_key",
     "get_session_count_key",
-    "check_session_limit",
-    "check_concurrent_streams",
-    "rate_limit_exceeded_handler",
-    "token_tracker",
     "RATE_LIMITS",
-    "SessionLimitExceeded",
-    "ConcurrentStreamLimitExceeded",
 ]

@@ -594,12 +594,8 @@ class CoachAgent:
                     top = pool[0]
                     top_score = top.score
                     early_score = early[0].score
-                    if top_score is None or early_score is None:
-                        pool = pool
-                    elif early_score >= top_score - EARLY_LESSON_MARGIN:
+                    if early_score is not None and top_score is not None and early_score >= top_score - EARLY_LESSON_MARGIN:
                         pool = early
-                    else:
-                        pool = pool
 
         return pool[:max_refs]
 

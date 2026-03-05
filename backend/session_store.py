@@ -142,19 +142,6 @@ class InMemorySessionStore:
                 f"messages: {record.message_count})"
             )
 
-    def get_stats(self) -> Dict[str, int]:
-        """
-        Get session store statistics.
-
-        Returns:
-            Dictionary with session counts
-        """
-        return {
-            "total_sessions": len(self._sessions),
-            "max_sessions": MAX_TOTAL_SESSIONS,
-            "max_per_api_key": MAX_SESSIONS_PER_API_KEY,
-        }
-
     def _cleanup(self) -> None:
         """Remove expired sessions based on TTL."""
         cutoff = datetime.now(timezone.utc) - self._ttl
