@@ -19,6 +19,8 @@ from rag.router import ActivityFilters, RouteDecision
 
 logger = logging.getLogger(__name__)
 
+_RAG_CACHE_SIZE = 64  # Max cached (query, decision) results per retriever instance
+
 
 def _node_content(node: Any) -> str:
     """
@@ -220,6 +222,7 @@ class RagRetriever:
         self.master_index = self._build_index(config.master_collection)
         self.activity_index = self._build_index(config.activities_collection)
         self.home_index = self._build_index(config.home_collection)
+        self._cache: dict = {}  # (query, decision_key) -> RetrievalResult
 
     def _build_index(self, collection_name: str) -> VectorStoreIndex:
         vector_store = QdrantVectorStore(client=self.client, collection_name=collection_name)
@@ -312,7 +315,31 @@ class RagRetriever:
             # else: fall back to activity_type results (e.g. yoga exists only as a blog, not a video)
         return chunks[:base_top_k]
 
+    @staticmethod
+    def _decision_key(decision: RouteDecision) -> tuple:
+        """Convert a RouteDecision to a hashable cache key."""
+        filters = decision.activity_filters
+        filters_key = (
+            filters.cost_label,
+            tuple(filters.days or []),
+            filters.location,
+            filters.activity_type,
+        ) if filters else None
+        return (
+            decision.use_master,
+            decision.use_activities,
+            decision.use_home,
+            decision.prefer_science,
+            decision.home_resource_type,
+            filters_key,
+        )
+
     def gather_context(self, query: str, decision: RouteDecision) -> RetrievalResult:
+        cache_key = (query, self._decision_key(decision))
+        if cache_key in self._cache:
+            logger.debug("RAG cache hit for query: %.40s...", query)
+            return self._cache[cache_key]
+
         master_chunks: List[RetrievedChunk] = []
         activity_chunks: List[RetrievedChunk] = []
         home_chunks: List[RetrievedChunk] = []
@@ -329,8 +356,12 @@ class RagRetriever:
                 resource_type=decision.home_resource_type,
             )
 
-        return RetrievalResult(
+        result = RetrievalResult(
             master_chunks=master_chunks,
             activity_chunks=activity_chunks,
             home_chunks=home_chunks,
         )
+        if len(self._cache) >= _RAG_CACHE_SIZE:
+            self._cache.pop(next(iter(self._cache)))  # evict oldest entry
+        self._cache[cache_key] = result
+        return result

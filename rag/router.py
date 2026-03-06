@@ -110,6 +110,19 @@ SCIENCE_KEYWORDS = [
     "proof",
 ]
 
+# Compiled once at import time — used in QueryRouter.route() on every message
+_SCIENCE_RE = re.compile("|".join(re.escape(k) for k in SCIENCE_KEYWORDS), re.IGNORECASE)
+_ACTIVITY_RE = re.compile("|".join(re.escape(k) for k in ACTIVITY_KEYWORDS), re.IGNORECASE)
+_HOME_RE = re.compile("|".join(re.escape(k) for k in HOME_KEYWORDS), re.IGNORECASE)
+_TYPE_RE: Dict[str, re.Pattern] = {
+    act_type: re.compile("|".join(re.escape(k) for k in keywords), re.IGNORECASE)
+    for act_type, keywords in TYPE_KEYWORDS.items()
+}
+_HOME_RESOURCE_RE: Dict[str, re.Pattern] = {
+    res_type: re.compile("|".join(re.escape(k) for k in keywords), re.IGNORECASE)
+    for res_type, keywords in HOME_RESOURCE_TYPE_KEYWORDS.items()
+}
+
 
 @dataclass
 class ActivityFilters:
@@ -138,21 +151,21 @@ class QueryRouter:
 
     def route(self, user_input: str) -> RouteDecision:
         lowered = user_input.lower()
-        prefer_science = any(keyword in lowered for keyword in SCIENCE_KEYWORDS)
+        prefer_science = bool(_SCIENCE_RE.search(lowered))
 
         # At-home detection takes priority over local activity routing
-        if any(keyword in lowered for keyword in HOME_KEYWORDS):
+        if _HOME_RE.search(lowered):
             activity_filters = ActivityFilters()
-            for act_type, keywords in TYPE_KEYWORDS.items():
-                if any(keyword in lowered for keyword in keywords):
+            for act_type, pattern in _TYPE_RE.items():
+                if pattern.search(lowered):
                     activity_filters.activity_type = act_type
                     break
             if not activity_filters.has_filters():
                 activity_filters = None
 
             home_resource_type = None
-            for res_type, keywords in HOME_RESOURCE_TYPE_KEYWORDS.items():
-                if any(keyword in lowered for keyword in keywords):
+            for res_type, pattern in _HOME_RESOURCE_RE.items():
+                if pattern.search(lowered):
                     home_resource_type = res_type
                     break
 
@@ -164,7 +177,7 @@ class QueryRouter:
                 home_resource_type=home_resource_type,
             )
 
-        use_activities = any(keyword in lowered for keyword in ACTIVITY_KEYWORDS)
+        use_activities = bool(_ACTIVITY_RE.search(lowered))
         activity_filters = ActivityFilters()
 
         recognized_location = False
@@ -182,8 +195,8 @@ class QueryRouter:
                 recognized_location = True
                 break
 
-        for act_type, keywords in TYPE_KEYWORDS.items():
-            if any(keyword in lowered for keyword in keywords):
+        for act_type, pattern in _TYPE_RE.items():
+            if pattern.search(lowered):
                 activity_filters.activity_type = act_type
                 use_activities = True
                 break

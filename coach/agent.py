@@ -74,6 +74,7 @@ class CoachAgent:
         max_tokens: int = 600,
         retriever: Optional[RagRetriever] = None,
         router: Optional[QueryRouter] = None,
+        lesson_overviews: Optional[Dict[int, Dict[str, str]]] = None,
     ) -> None:
         self.client = client
         self.model = model
@@ -87,18 +88,22 @@ class CoachAgent:
         self.latest_retrieval: Optional[RetrievalResult] = None
         self.last_retrieval_with_results: Optional[RetrievalResult] = None
         self._last_prefer_science: bool = False
-        from rag.parsing_master import parse_lesson_overviews
-        from rag.config import DATA_DIR, MASTER_FILENAME
-        self.lesson_overviews: Dict[int, Dict[str, str]] = {}
-        try:
-            _data_path = retriever.config.master_data_path if retriever is not None else DATA_DIR / MASTER_FILENAME
-            self.lesson_overviews = parse_lesson_overviews(_data_path)
-            if self.lesson_overviews:
-                logger.info("Lesson overviews loaded: %d lessons", len(self.lesson_overviews))
-            else:
-                logger.warning("Lesson overviews loaded but empty — check data file at %s", _data_path)
-        except Exception as exc:
-            logger.error("Failed to load lesson overviews: %s", exc)
+        if lesson_overviews is not None:
+            self.lesson_overviews = lesson_overviews
+        else:
+            # Fallback: load from disk (used when called outside the app, e.g. tests or CLI)
+            from rag.parsing_master import parse_lesson_overviews
+            from rag.config import DATA_DIR, MASTER_FILENAME
+            self.lesson_overviews: Dict[int, Dict[str, str]] = {}
+            try:
+                _data_path = retriever.config.master_data_path if retriever is not None else DATA_DIR / MASTER_FILENAME
+                self.lesson_overviews = parse_lesson_overviews(_data_path)
+                if self.lesson_overviews:
+                    logger.info("Lesson overviews loaded: %d lessons", len(self.lesson_overviews))
+                else:
+                    logger.warning("Lesson overviews loaded but empty — check data file at %s", _data_path)
+            except Exception as exc:
+                logger.error("Failed to load lesson overviews: %s", exc)
 
     def _validate_input(self, user_input: str) -> None:
         """
