@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import logging
+import time
 from typing import Iterator
 
 from dotenv import load_dotenv
@@ -18,6 +19,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from coach import CoachAgent, run_rag_sanity_check
+from coach.constants import STREAMING_TIMEOUT_SECONDS
 from rag.config import load_rag_config
 from rag.retriever import RagRetriever
 from rag.router import QueryRouter
@@ -158,8 +160,13 @@ async def stream_message(request: Request, session_id: str, payload: MessageRequ
     def event_stream() -> Iterator[str]:
         stream = record.agent.stream_response(payload.text)
         final_reply = ""
+        deadline = time.monotonic() + STREAMING_TIMEOUT_SECONDS
         try:
             while True:
+                if time.monotonic() > deadline:
+                    logger.error(f"Streaming timeout ({STREAMING_TIMEOUT_SECONDS}s) for session {session_id}")
+                    yield _as_event("error", {"error": "Response timed out"})
+                    return
                 chunk = next(stream)
                 if not chunk:
                     continue
