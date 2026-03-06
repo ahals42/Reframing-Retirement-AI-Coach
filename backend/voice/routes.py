@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import base64
-import os
 import logging
 
 from fastapi import APIRouter, File, HTTPException, UploadFile, Request
 from openai import OpenAI
 
+from config.app_config import MAX_AUDIO_SIZE_BYTES
 from ..session_store import InMemorySessionStore
 from ..middleware.auth import require_api_key
 from ..middleware.rate_limit import limiter, RATE_LIMITS
@@ -18,7 +18,6 @@ from .tts import synthesize_speech
 logger = logging.getLogger(__name__)
 
 # Security constants
-MAX_AUDIO_SIZE_BYTES = int(os.getenv("MAX_AUDIO_SIZE_MB", "10")) * 1024 * 1024  # Default 10MB
 ALLOWED_MIME_TYPES = ["audio/wav", "audio/webm", "audio/mpeg", "audio/mp4", "audio/ogg"]
 ALLOWED_FILE_EXTENSIONS = [".wav", ".webm", ".mp3", ".m4a", ".ogg", ".opus"]
 
