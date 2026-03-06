@@ -20,7 +20,8 @@ from slowapi.errors import RateLimitExceeded
 
 from coach import CoachAgent, run_rag_sanity_check
 from coach.constants import STREAMING_TIMEOUT_SECONDS
-from rag.config import load_rag_config
+from rag.config import load_rag_config, DATA_DIR, MASTER_FILENAME
+from rag.parsing_master import parse_lesson_overviews
 from rag.retriever import RagRetriever
 from rag.router import QueryRouter
 
@@ -49,9 +50,18 @@ try:
 except Exception as exc:
     logger.warning(f"RAG initialization failed: {exc}. Continuing without vector context.")
 
+# Load lesson overviews once at startup — shared across all sessions
+_lesson_overviews = {}
+try:
+    _data_path = retriever.config.master_data_path if retriever is not None else DATA_DIR / MASTER_FILENAME
+    _lesson_overviews = parse_lesson_overviews(_data_path)
+    logger.info(f"Lesson overviews loaded at startup: {len(_lesson_overviews)} lessons")
+except Exception as exc:
+    logger.warning(f"Failed to load lesson overviews at startup: {exc}")
+
 
 def _agent_factory() -> CoachAgent:
-    return CoachAgent(client=client, model=config.chat_model, retriever=retriever, router=QueryRouter())
+    return CoachAgent(client=client, model=config.chat_model, retriever=retriever, router=QueryRouter(), lesson_overviews=_lesson_overviews)
 
 
 session_store = InMemorySessionStore(_agent_factory, ttl_minutes=int(os.getenv("SESSION_TTL_MINUTES", "90")))
