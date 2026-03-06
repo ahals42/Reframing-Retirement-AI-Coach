@@ -18,8 +18,8 @@ from openai import OpenAI
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
+from config.app_config import RATE_LIMIT_HEALTHZ_PER_MINUTE, SESSION_TTL_MINUTES, STREAMING_TIMEOUT_SECONDS
 from coach import CoachAgent, run_rag_sanity_check
-from coach.constants import STREAMING_TIMEOUT_SECONDS
 from rag.config import load_rag_config, DATA_DIR, MASTER_FILENAME
 from rag.parsing_master import parse_lesson_overviews
 from rag.retriever import RagRetriever
@@ -64,7 +64,7 @@ def _agent_factory() -> CoachAgent:
     return CoachAgent(client=client, model=config.chat_model, retriever=retriever, router=QueryRouter(), lesson_overviews=_lesson_overviews)
 
 
-session_store = InMemorySessionStore(_agent_factory, ttl_minutes=int(os.getenv("SESSION_TTL_MINUTES", "90")))
+session_store = InMemorySessionStore(_agent_factory, ttl_minutes=SESSION_TTL_MINUTES)
 
 app = FastAPI(title="Reframing Retirement Coach API", version="0.1.0")
 
@@ -93,7 +93,7 @@ logger.info("Application initialized successfully")
 
 
 @app.get("/healthz")
-@limiter.limit("1000/minute")
+@limiter.limit(f"{RATE_LIMIT_HEALTHZ_PER_MINUTE}/minute")
 async def health_check(request: Request) -> dict:
     """
     Health check endpoint (no authentication required for Docker healthcheck).

@@ -15,12 +15,17 @@ Usage:
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 """
 
-import os
 import logging
 
 from fastapi import Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+
+from config.app_config import (
+    RATE_LIMIT_MESSAGES_PER_HOUR,
+    RATE_LIMIT_SESSION_CREATION_PER_HOUR,
+    RATE_LIMIT_VOICE_CONCURRENT,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -73,11 +78,11 @@ limiter = Limiter(
 )
 
 
-# Rate limit configurations (can be overridden by environment variables)
+# Rate limit configurations — sourced from config.app_config
 RATE_LIMITS = {
-    "messages_per_hour": os.getenv("RATE_LIMIT_MESSAGES_PER_HOUR", "500"),
-    "voice_concurrent": os.getenv("RATE_LIMIT_VOICE_CONCURRENT", "15"),
-    "session_creation_per_hour": os.getenv("RATE_LIMIT_SESSION_CREATION_PER_HOUR", "60"),
+    "messages_per_hour": RATE_LIMIT_MESSAGES_PER_HOUR,
+    "voice_concurrent": RATE_LIMIT_VOICE_CONCURRENT,
+    "session_creation_per_hour": RATE_LIMIT_SESSION_CREATION_PER_HOUR,
 }
 
 

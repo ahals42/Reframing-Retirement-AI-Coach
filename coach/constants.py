@@ -1,12 +1,16 @@
 """Constants, thresholds, keyword lists, and questions for the coach module."""
 
-import os
-
-# Security and performance thresholds
-LAYER_CONFIDENCE_THRESHOLD = 0.7
-MAX_HISTORY_MESSAGES = int(os.getenv("MAX_HISTORY_MESSAGES", "100"))
-MAX_INPUT_LENGTH = int(os.getenv("MAX_MESSAGE_LENGTH", "10000"))
-STREAMING_TIMEOUT_SECONDS = int(os.getenv("STREAMING_TIMEOUT_SECONDS", "300"))  # 5 minutes
+from config.app_config import (
+    EARLY_LESSON_MARGIN,
+    EARLY_LESSON_MAX,
+    LAYER_CONFIDENCE_THRESHOLD,
+    MAX_HISTORY_MESSAGES,
+    MAX_MESSAGE_LENGTH as MAX_INPUT_LENGTH,
+    REFERENCE_MIN_SCORE,
+    REFERENCE_POOL_SIZE,
+    REFERENCE_SCORE_MARGIN,
+    STREAMING_TIMEOUT_SECONDS,
+)
 
 # Keyword lists for layer detection
 ROUTINE_KEYWORDS = [
@@ -154,12 +158,7 @@ FREQUENCY_QUESTION = "In the last 7 days, about how many days did you do any pur
 ROUTINE_QUESTION = "Do you already have something you do most weeks, or are you still figuring out what could work?"
 TIMEFRAME_QUESTION = "Has this been going on for a while (weeks/months), or is it something you're just starting to experiment with?"
 
-# Reference selection constants
-REFERENCE_MIN_SCORE = 0.68
-REFERENCE_SCORE_MARGIN = 0.08
-REFERENCE_POOL_SIZE = 5
-EARLY_LESSON_MAX = 2
-EARLY_LESSON_MARGIN = 0.08
+# Reference selection constants — imported from config.app_config above
 
 # Known activity hub locations
 KNOWN_ACTIVITY_HUBS = [

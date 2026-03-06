@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import os
 from pydantic import BaseModel, Field, field_validator
+
+from config.app_config import MAX_MESSAGE_LENGTH
 
 
 class SessionCreateResponse(BaseModel):
@@ -21,7 +22,7 @@ class MessageRequest(BaseModel):
     text: str = Field(
         ...,
         description="User message text.",
-        max_length=int(os.getenv("MAX_MESSAGE_LENGTH", "10000"))
+        max_length=MAX_MESSAGE_LENGTH
     )
 
     @field_validator('text')
