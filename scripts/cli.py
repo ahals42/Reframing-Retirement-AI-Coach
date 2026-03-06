@@ -25,7 +25,7 @@ def build_agent() -> CoachAgent:
     try:
         retriever = RagRetriever(config)
         run_rag_sanity_check(retriever)
-    except Exception as exc:
+    except (RuntimeError, ConnectionError, OSError) as exc:
         logger.warning(f"RAG initialization failed: {exc}. Continuing without vector context.")
 
     return CoachAgent(client=client, model=config.chat_model, retriever=retriever, router=router)

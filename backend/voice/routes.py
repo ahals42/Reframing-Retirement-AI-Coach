@@ -54,8 +54,11 @@ def create_voice_router(session_store: InMemorySessionStore, client: OpenAI) -> 
             logger.warning(f"Voice chat attempted for unknown session {session_id}")
             raise HTTPException(status_code=404, detail="Unknown session")
 
-        # Read audio file
-        audio_bytes = audio.file.read()
+        # Read audio file and ensure it is closed even on error
+        try:
+            audio_bytes = await audio.read()
+        finally:
+            await audio.close()
 
         # Validate audio size
         if not audio_bytes:

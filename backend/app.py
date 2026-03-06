@@ -47,7 +47,7 @@ retriever = None
 try:
     retriever = RagRetriever(config)
     run_rag_sanity_check(retriever)
-except Exception as exc:
+except (RuntimeError, ConnectionError, OSError) as exc:
     logger.warning(f"RAG initialization failed: {exc}. Continuing without vector context.")
 
 # Load lesson overviews once at startup — shared across all sessions
@@ -56,7 +56,7 @@ try:
     _data_path = retriever.config.master_data_path if retriever is not None else DATA_DIR / MASTER_FILENAME
     _lesson_overviews = parse_lesson_overviews(_data_path)
     logger.info(f"Lesson overviews loaded at startup: {len(_lesson_overviews)} lessons")
-except Exception as exc:
+except (OSError, ValueError) as exc:
     logger.warning(f"Failed to load lesson overviews at startup: {exc}")
 
 

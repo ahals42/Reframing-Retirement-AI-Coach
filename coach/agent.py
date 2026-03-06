@@ -102,7 +102,7 @@ class CoachAgent:
                     logger.info("Lesson overviews loaded: %d lessons", len(self.lesson_overviews))
                 else:
                     logger.warning("Lesson overviews loaded but empty — check data file at %s", _data_path)
-            except Exception as exc:
+            except (OSError, ValueError) as exc:
                 logger.error("Failed to load lesson overviews: %s", exc)
 
     def _validate_input(self, user_input: str) -> None:
