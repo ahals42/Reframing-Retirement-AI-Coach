@@ -47,5 +47,8 @@ _gen_diagrams.py
 # Local-only update logs
 updates/
 
+# Local-only project anatomy / overview docs
+anatomy/
+
 # Claude Code local config (hooks, plans, settings)
 .claude/
