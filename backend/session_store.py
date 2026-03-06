@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import os
 import logging
+import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Optional, Set
 from uuid import uuid4
 
 from coach import CoachAgent
@@ -53,6 +54,8 @@ class InMemorySessionStore:
         self._factory = factory
         self._ttl = timedelta(minutes=ttl_minutes)
         self._sessions: Dict[str, SessionRecord] = {}
+        self._key_sessions: Dict[str, Set[str]] = {}  # api_key_hash -> {session_ids}
+        self._lock = threading.Lock()
         logger.info(f"Initialized session store with TTL={ttl_minutes} minutes")
 
     def create(self, api_key_hash: Optional[str] = None) -> str:
@@ -80,12 +83,9 @@ class InMemorySessionStore:
                 f"Server capacity exceeded. Maximum {MAX_TOTAL_SESSIONS} active sessions allowed."
             )
 
-        # Check per-API-key limit
+        # Check per-API-key limit using secondary index (O(1) lookup)
         if api_key_hash:
-            api_key_session_count = sum(
-                1 for record in self._sessions.values()
-                if record.api_key_hash == api_key_hash
-            )
+            api_key_session_count = len(self._key_sessions.get(api_key_hash, set()))
             if api_key_session_count >= MAX_SESSIONS_PER_API_KEY:
                 logger.warning(
                     f"API key {api_key_hash}... exceeded session limit: "
@@ -102,6 +102,8 @@ class InMemorySessionStore:
             agent=self._factory(),
             api_key_hash=api_key_hash
         )
+        if api_key_hash:
+            self._key_sessions.setdefault(api_key_hash, set()).add(session_id)
 
         logger.info(
             f"Created session {session_id} "
@@ -123,8 +125,9 @@ class InMemorySessionStore:
         """
         record = self._sessions.get(session_id)
         if record:
-            record.last_activity = datetime.now(timezone.utc)
-            record.message_count += 1
+            with self._lock:
+                record.last_activity = datetime.now(timezone.utc)
+                record.message_count += 1
         return record
 
     def delete(self, session_id: str) -> None:
@@ -136,6 +139,10 @@ class InMemorySessionStore:
         """
         record = self._sessions.pop(session_id, None)
         if record:
+            if record.api_key_hash and record.api_key_hash in self._key_sessions:
+                self._key_sessions[record.api_key_hash].discard(session_id)
+                if not self._key_sessions[record.api_key_hash]:
+                    del self._key_sessions[record.api_key_hash]
             logger.info(
                 f"Deleted session {session_id} "
                 f"(total: {len(self._sessions)}, "
@@ -152,5 +159,9 @@ class InMemorySessionStore:
 
         if expired:
             for key in expired:
-                del self._sessions[key]
+                record = self._sessions.pop(key)
+                if record.api_key_hash and record.api_key_hash in self._key_sessions:
+                    self._key_sessions[record.api_key_hash].discard(key)
+                    if not self._key_sessions[record.api_key_hash]:
+                        del self._key_sessions[record.api_key_hash]
             logger.info(f"Cleaned up {len(expired)} expired sessions")
