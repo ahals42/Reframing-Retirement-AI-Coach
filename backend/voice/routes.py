@@ -22,6 +22,28 @@ MAX_AUDIO_SIZE_BYTES = int(os.getenv("MAX_AUDIO_SIZE_MB", "10")) * 1024 * 1024  
 ALLOWED_MIME_TYPES = ["audio/wav", "audio/webm", "audio/mpeg", "audio/mp4", "audio/ogg"]
 ALLOWED_FILE_EXTENSIONS = [".wav", ".webm", ".mp3", ".m4a", ".ogg", ".opus"]
 
+# Magic byte signatures for allowed audio formats (checked against actual file content)
+_AUDIO_MAGIC: list[bytes] = [
+    b"RIFF",              # WAV
+    b"\x1a\x45\xdf\xa3", # WebM / MKV
+    b"\xff\xfb",          # MP3 (no ID3 tag)
+    b"\xff\xf3",          # MP3
+    b"\xff\xf2",          # MP3
+    b"ID3",               # MP3 with ID3 tag
+    b"OggS",              # OGG / Opus
+]
+
+
+def _has_valid_audio_magic(data: bytes) -> bool:
+    """Return True if the first bytes match a known audio file signature."""
+    for magic in _AUDIO_MAGIC:
+        if data[:len(magic)] == magic:
+            return True
+    # MP4 / M4A: 'ftyp' box starts at offset 4
+    if len(data) >= 8 and data[4:8] == b"ftyp":
+        return True
+    return False
+
 
 def create_voice_router(session_store: InMemorySessionStore, client: OpenAI) -> APIRouter:
     router = APIRouter()
@@ -63,6 +85,14 @@ def create_voice_router(session_store: InMemorySessionStore, client: OpenAI) -> 
         # Validate audio size
         if not audio_bytes:
             raise HTTPException(status_code=400, detail="Empty audio payload")
+
+        # Validate actual file content (magic bytes) — client-supplied headers are spoofable
+        if not _has_valid_audio_magic(audio_bytes):
+            logger.warning(
+                f"Audio magic byte check failed for session {session_id} "
+                f"from API key {request.state.api_key[:8]}..."
+            )
+            raise HTTPException(status_code=400, detail="Invalid audio file content")
 
         if len(audio_bytes) > MAX_AUDIO_SIZE_BYTES:
             logger.warning(

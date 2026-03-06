@@ -93,7 +93,8 @@ logger.info("Application initialized successfully")
 
 
 @app.get("/healthz")
-async def health_check() -> dict:
+@limiter.limit("1000/minute")
+async def health_check(request: Request) -> dict:
     """
     Health check endpoint (no authentication required for Docker healthcheck).
     Returns basic application status.
