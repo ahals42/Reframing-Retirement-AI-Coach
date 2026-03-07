@@ -24,16 +24,22 @@ A browser-based interface also exists for testing and demonstration purposes, th
 
 <table>
   <tr>
-    <td align="center" width="45%">
-      <img src="docs/assets/app-view.png" alt="Reframing Retirement Companion in the Pathverse app" width="300"/><br/>
-      <em>Pathverse app</em>
+    <td align="center" width="50%">
+      <img src="docs/assets/Chat-Button-Location.png" alt="Chat button location in the Pathverse app" width="300"/><br/>
+      <em>Opening the coach in Pathverse</em>
     </td>
-    <td align="center" width="55%">
-      <img src="docs/assets/cloud-view.png" alt="Reframing Retirement Coach browser interface" width="500"/><br/>
-      <em>Browser interface</em>
+    <td align="center" width="50%">
+      <img src="docs/assets/In-App-Chatbot-View.png" alt="In-app chatbot view" width="300"/><br/>
+      <em>Conversation view</em>
     </td>
   </tr>
 </table>
+
+<details>
+<summary>Browser interface</summary>
+<br/>
+<img src="docs/assets/cloud-view.png" alt="Reframing Retirement Coach browser interface" width="500"/>
+</details>
 
 ## How It Works
 
