@@ -51,4 +51,4 @@ Everything runs on a secure cloud server. Conversations are kept private and are
 
 Developers can find technical documentation in the [docs/](docs/) folder.
 
-![System architecture](docs/assets/cloud-architecture.png)
+![How the AI coach works](docs/assets/ai-coach-journey.png)
