@@ -22,7 +22,7 @@ A browser-based interface also exists for testing and demonstration purposes, th
 
 ## Experience Snapshot
 
-<realistictable>
+<table>
   <tr>
     <td align="center" width="45%">
       <img src="docs/assets/app-view.png" alt="Reframing Retirement Companion in the Pathverse app" width="300"/><br/>
