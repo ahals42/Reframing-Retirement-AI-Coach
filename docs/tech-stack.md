@@ -15,7 +15,7 @@
 
 ## AI / LLM
 - **Provider:** OpenAI
-- **Chat model:** GPT-4o — generates all coaching responses
+- **Chat model:** GPT-4o-mini — generates all coaching responses
 - **Embedding model:** text-embedding-3-large — converts text into vectors for search
 - **Speech-to-text:** Whisper (via OpenAI API) — transcribes voice input
 - **Text-to-speech:** OpenAI TTS — synthesizes coach voice replies
