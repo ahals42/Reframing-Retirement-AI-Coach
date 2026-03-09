@@ -81,6 +81,8 @@ class CoachAgent:
         self.temperature = temperature
         self.top_p = top_p
         self.max_tokens = max_tokens
+        self._is_new_gen = model.startswith("gpt-5") or model.startswith("o")
+        self._token_limit_key = "max_completion_tokens" if self._is_new_gen else "max_tokens"
         self.state = ConversationState()
         self.history: List[Dict[str, str]] = []
         self.retriever = retriever
@@ -104,6 +106,15 @@ class CoachAgent:
                     logger.warning("Lesson overviews loaded but empty — check data file at %s", _data_path)
             except (OSError, ValueError) as exc:
                 logger.error("Failed to load lesson overviews: %s", exc)
+
+    @property
+    def _sampling_kwargs(self) -> dict:
+        token_limit = 4000 if self._is_new_gen else self.max_tokens
+        kwargs: dict = {self._token_limit_key: token_limit}
+        if not self._is_new_gen:
+            kwargs["temperature"] = self.temperature
+            kwargs["top_p"] = self.top_p
+        return kwargs
 
     def _validate_input(self, user_input: str) -> None:
         """
@@ -158,9 +169,7 @@ class CoachAgent:
 
         completion = self.client.chat.completions.create(
             model=self.model,
-            temperature=self.temperature,
-            top_p=self.top_p,
-            max_tokens=self.max_tokens,
+            **self._sampling_kwargs,
             messages=prepared.messages,
         )
         assistant_reply = completion.choices[0].message.content.strip()
@@ -187,9 +196,7 @@ class CoachAgent:
         if prepared.response_mode in {"lowest_mpac", "emotion_education", "educational", "source_request", "mpac_question", "home_resources"}:
             completion = self.client.chat.completions.create(
                 model=self.model,
-                temperature=self.temperature,
-                top_p=self.top_p,
-                max_tokens=self.max_tokens,
+                **self._sampling_kwargs,
                 messages=prepared.messages,
             )
             assistant_reply = completion.choices[0].message.content.strip()
@@ -207,9 +214,7 @@ class CoachAgent:
         response_chunks: List[str] = []
         stream = self.client.chat.completions.create(
             model=self.model,
-            temperature=self.temperature,
-            top_p=self.top_p,
-            max_tokens=self.max_tokens,
+            **self._sampling_kwargs,
             messages=prepared.messages,
             stream=True,
         )
