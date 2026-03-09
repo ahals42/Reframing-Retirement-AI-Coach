@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 import re
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -19,7 +20,7 @@ from rag.router import ActivityFilters, RouteDecision
 
 logger = logging.getLogger(__name__)
 
-_RAG_CACHE_SIZE = 64  # Max cached (query, decision) results per retriever instance
+_RAG_CACHE_SIZE = 256  # Max cached (query, decision) results per retriever instance
 
 
 def _node_content(node: Any) -> str:
@@ -340,26 +341,36 @@ class RagRetriever:
             logger.debug("RAG cache hit for query: %.40s...", query)
             return self._cache[cache_key]
 
-        master_chunks: List[RetrievedChunk] = []
-        activity_chunks: List[RetrievedChunk] = []
-        home_chunks: List[RetrievedChunk] = []
-
+        # Build a map of collection name -> callable for each enabled collection,
+        # then run them in parallel via threads (I/O-bound: Qdrant + embedding calls).
+        activity_type = decision.activity_filters.activity_type if decision.activity_filters else None
+        tasks = {}
         if decision.use_master:
-            master_chunks = self.retrieve_master(query, prefer_science=decision.prefer_science)
+            tasks["master"] = lambda: self.retrieve_master(query, prefer_science=decision.prefer_science)
         if decision.use_activities:
-            activity_chunks = self.retrieve_activities(query, filters=decision.activity_filters)
+            tasks["activity"] = lambda: self.retrieve_activities(query, filters=decision.activity_filters)
         if decision.use_home:
-            activity_type = decision.activity_filters.activity_type if decision.activity_filters else None
-            home_chunks = self.retrieve_home(
+            tasks["home"] = lambda: self.retrieve_home(
                 query,
                 activity_type=activity_type,
                 resource_type=decision.home_resource_type,
             )
 
+        results_map: Dict[str, List[RetrievedChunk]] = {}
+        if len(tasks) == 1:
+            # Single collection: no thread overhead needed
+            name, fn = next(iter(tasks.items()))
+            results_map[name] = fn()
+        elif len(tasks) > 1:
+            with ThreadPoolExecutor(max_workers=len(tasks)) as executor:
+                future_to_name = {executor.submit(fn): name for name, fn in tasks.items()}
+                for future in as_completed(future_to_name):
+                    results_map[future_to_name[future]] = future.result()
+
         result = RetrievalResult(
-            master_chunks=master_chunks,
-            activity_chunks=activity_chunks,
-            home_chunks=home_chunks,
+            master_chunks=results_map.get("master", []),
+            activity_chunks=results_map.get("activity", []),
+            home_chunks=results_map.get("home", []),
         )
         if len(self._cache) >= _RAG_CACHE_SIZE:
             self._cache.pop(next(iter(self._cache)))  # evict oldest entry
