@@ -25,7 +25,8 @@
 - **RAG framework:** LlamaIndex — manages ingestion, chunking, and retrieval
 - **Collections:** 3 separate indexes (master course content, local activities, at-home resources)
 - **Router:** Custom keyword/regex router that decides which index(es) to query
-- **Cache:** In-memory LRU cache (64 entries) on the retriever to skip repeat Qdrant queries
+- **Cache:** In-memory LRU cache (256 entries) on the retriever to skip repeat Qdrant queries
+- **Retrieval:** Parallel Qdrant queries via ThreadPoolExecutor for multi-collection lookups
 
 ## Coach Logic
 - **Agent:** Custom CoachAgent class — orchestrates retrieval, prompt building, and streaming
