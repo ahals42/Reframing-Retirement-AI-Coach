@@ -70,7 +70,7 @@ def load_rag_config() -> RagConfig:
     """Load configuration from .env with safe defaults."""
 
     openai_api_key = _read_openai_key()
-    chat_model = os.getenv("OPENAI_MODEL", "gpt-4o")
+    chat_model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
     embedding_model = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-large")
     embedding_dimensions = EMBED_DIMENSIONS.get(embedding_model, 3072)
 

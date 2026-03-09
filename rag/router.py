@@ -82,6 +82,8 @@ HOME_KEYWORDS = [
     "individual video",
     "watch a workout",
     "watch a video",
+    "home video",
+    "home videos",
 ]
 
 HOME_RESOURCE_TYPE_KEYWORDS: Dict[str, List[str]] = {
