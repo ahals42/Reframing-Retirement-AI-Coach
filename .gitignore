@@ -52,3 +52,6 @@ anatomy/
 
 # Claude Code local config (hooks, plans, settings)
 .claude/
+
+# Local-only manuscript working notes
+manuscript 1/
