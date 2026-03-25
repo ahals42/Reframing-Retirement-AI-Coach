@@ -247,8 +247,9 @@ class RagRetriever:
 
     def retrieve_master(self, query: str, top_k: Optional[int] = None, *, prefer_science: bool = False) -> List[RetrievedChunk]:
         base_top_k = top_k or self.config.master_top_k
-        # Cast a wider net when prefer_science=True so science slides aren't crowded out by lesson slides
-        retrieval_top_k = base_top_k * 3 if prefer_science else base_top_k
+        # Over-fetch to ensure k chunks survive post-retrieval filtering
+        # (science gating, do-not-reference). Wider net for science queries.
+        retrieval_top_k = base_top_k * 3 if prefer_science else base_top_k * 2
         chunks = self._retrieve_chunks(self.master_index, query, retrieval_top_k, "master")
         chunks = [
             c for c in chunks
@@ -268,7 +269,8 @@ class RagRetriever:
         top_k: Optional[int] = None,
     ) -> List[RetrievedChunk]:
         base_top_k = top_k or self.config.activity_top_k
-        retrieval_top_k = max(base_top_k * 2, 8) if filters and filters.days else base_top_k
+        # Over-fetch to ensure k chunks survive any filtering
+        retrieval_top_k = max(base_top_k * 2, 8)
         chunks = self._retrieve_chunks(self.activity_index, query, retrieval_top_k, "activity")
         if filters:
             chunks = self._apply_activity_filters(chunks, filters)
@@ -306,7 +308,9 @@ class RagRetriever:
         top_k: Optional[int] = None,
     ) -> List[RetrievedChunk]:
         base_top_k = top_k or self.config.home_top_k
-        chunks = self._retrieve_chunks(self.home_index, query, base_top_k, "home_activity")
+        # Over-fetch to ensure k chunks survive any type/resource filtering
+        retrieval_top_k = base_top_k * 2
+        chunks = self._retrieve_chunks(self.home_index, query, retrieval_top_k, "home_activity")
         if activity_type:
             chunks = [c for c in chunks if c.metadata.get("activity_type") == activity_type]
         if resource_type:
