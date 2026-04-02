@@ -125,6 +125,33 @@ EDUCATIONAL_REQUEST_PATTERNS: List[Pattern] = [
     re.compile(r"\bevidence\b.*\b(physical activity|exercise|movement|being active)\b", re.IGNORECASE),
     re.compile(r"\bresearch\b.*\b(physical activity|exercise|movement|being active)\b", re.IGNORECASE),
     re.compile(r"\btell me about\b.*\b(physical activity|exercise|movement|being active)\b", re.IGNORECASE),
+    # Term-definition queries: catch "What does X mean?", "Define X", "What is an asymptotic curve?"
+    # These do not require activity anchor words because lesson terminology can come from any field.
+    re.compile(r"\bwhat\s+does\b.{1,60}\bmean\b", re.IGNORECASE),
+    re.compile(r"\bwhat\s+do\b.{1,60}\bmean\b", re.IGNORECASE),
+    re.compile(r"\bdefine\b", re.IGNORECASE),
+    re.compile(r"\bhow\s+(?:is|are)\b.{1,50}\bdefined?\b", re.IGNORECASE),
+    re.compile(r"\bwhat\s+(?:is|are)\s+(?:an?\s+)?(?:asymptotic|valence|arousal|dose.response|transtheoretical|affective|instrumental|hedonic|eudemon|intrinsic|extrinsic|autonomous|self.determin|allostatic)\b", re.IGNORECASE),
+    # Habit and goal questions - core M-PAC coaching constructs that may lack activity anchor words.
+    re.compile(r"\bhow\s+do\s+habits?\s+work\b", re.IGNORECASE),
+    re.compile(r"\b(?:build|form|make|create)\s+(?:good\s+)?habits?\b", re.IGNORECASE),
+    re.compile(r"\bwhat\s+(?:makes|is)\s+a\s+(?:good\s+)?(?:behaviou?ral\s+)?goal\b", re.IGNORECASE),
+    re.compile(r"\bbehaviou?ral\s+goal\b", re.IGNORECASE),
+    re.compile(r"\bwhat\s+helps?\s+(?:people\s+)?build\s+(?:good\s+)?habits?\b", re.IGNORECASE),
+    re.compile(r"\bdifference\s+between\s+(?:a\s+)?(?:habit|value)\b", re.IGNORECASE),
+    re.compile(r"\bvalues?\s+and\s+identity\b", re.IGNORECASE),
+    re.compile(r"\bidentity\s+and\s+values?\b", re.IGNORECASE),
+    # Self-talk and breathing - reactive regulation strategies, no activity anchor needed.
+    re.compile(r"\bself.talk\b", re.IGNORECASE),
+    re.compile(r"\bpositive\s+self.talk\b", re.IGNORECASE),
+    re.compile(r"\bbreathing\s+exercise\b", re.IGNORECASE),
+    # Emotion self-regulation - reactive regulation is a core M-PAC construct.
+    # Without activity anchor words these can be mistaken for mental health / therapy requests.
+    re.compile(r"\b(?:manage|control|regulate)\s+my\s+emotions?\b", re.IGNORECASE),
+    re.compile(r"\bwhat\s+can\s+i\s+(?:do|say)\s+(?:to|when)\b.{0,40}\b(?:emotions?|mood|feel)\b", re.IGNORECASE),
+    # Habit cues - habit formation vocabulary without an activity anchor word.
+    re.compile(r"\b(?:why\s+do|how\s+do|what\s+makes)\s+(?:a\s+)?cues?\b", re.IGNORECASE),
+    re.compile(r"\bwhat\s+(?:is|makes)\s+a\s+good\s+cue\b", re.IGNORECASE),
 ]
 
 # Patterns for detecting explicit MPAC framework questions
@@ -135,10 +162,10 @@ MPAC_QUESTION_PATTERNS: List[Pattern] = [
 
     # Initiating reflective constructs
     re.compile(r"\bperceived\s+capabilit(?:y|ies)\b", re.IGNORECASE),
-    re.compile(r"\binstrumental\s+attitude\b", re.IGNORECASE),
+    re.compile(r"\binstrumental\s+(?:attitude|belief|beliefs)\b", re.IGNORECASE),
 
     # Ongoing reflective constructs
-    re.compile(r"\baffective\s+(?:judgment|judgement|attitude|appraisal)\b", re.IGNORECASE),
+    re.compile(r"\baffective\s+(?:judgment|judgement|attitude|appraisal|belief|beliefs)\b", re.IGNORECASE),
     re.compile(r"\bperceived\s+opportunit(?:y|ies)\b", re.IGNORECASE),
 
     # Regulatory constructs
