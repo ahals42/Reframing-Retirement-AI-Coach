@@ -302,7 +302,7 @@ class CoachAgent:
                 "Do NOT suggest activities, action steps, or behavior change. Do not ask questions. "
                 "Never use question marks. Output format: 1-3 sentences total, conversational, no bullet lists, no numbering, no bold. "
                 "Sentence 1 should neutrally acknowledge the feeling or hesitation. Sentence 2 should explain health relevance in plain language. "
-                "If a relevant slide is available, add one final sentence that points to at most two slides as module support."
+                "If a relevant slide is available, add one final sentence that points to at most two slides as lesson support."
             )
         elif mpac_question:
             response_mode = "mpac_question"
@@ -333,7 +333,7 @@ class CoachAgent:
                 "Provide educational support only, without action suggestions or questions. "
                 "Never use question marks. Output format: 1-3 sentences total, conversational, no bullet lists, no numbering, no bold. "
                 "Sentence 1-2 should summarize the key educational points in plain language. "
-                "If a relevant slide is available, add one final sentence that references one slide as optional module support."
+                "If a relevant slide is available, add one final sentence that references one slide as optional lesson support."
             )
         elif educational_use_case:
             response_mode = "educational"
@@ -341,7 +341,7 @@ class CoachAgent:
                 "Educational routing: respond primarily with informational support grounded in relevant slides. "
                 "Never use question marks. Output format: 1-3 sentences total, conversational, no bullet lists, no numbering, no bold. "
                 "Sentence 1-2 should give a concise, plain-language summary. "
-                "If a relevant slide is available, add one final sentence that references one slide as optional module support."
+                "If a relevant slide is available, add one final sentence that references one slide as optional lesson support."
             )
 
         if source_request and response_mode == "default":
@@ -635,14 +635,14 @@ class CoachAgent:
     ) -> str:
         if not allow or not references or max_refs <= 0:
             return (
-                "Do not mention module, lesson, or slide names. Do not cite or reference the modules. "
+                "Do not mention lesson or slide names. Do not cite or reference the lessons. "
                 "Use any retrieved slide content only as background."
             )
         limited = references[:max_refs]
         refs_line = "; ".join(limited)
         return (
-            f"If you include module references, keep it to one sentence and use at most {max_refs} from this list: {refs_line}. "
-            "Mention that it's in the module (Lesson/Slide), and do not invent or repeat references."
+            f"If you include lesson references, keep it to one sentence and use at most {max_refs} from this list: {refs_line}. "
+            "Mention that it's in the lesson (Lesson/Slide), and do not invent or repeat references."
         )
 
     @staticmethod
@@ -705,7 +705,7 @@ class CoachAgent:
         if module_reference_sentence:
             sentences = [
                 s for s in sentences
-                if not re.search(r"(you can find|find) more detail|you should check out these module|you can find that in the module", s, re.IGNORECASE)
+                if not re.search(r"(you can find|find) more detail|you should check out these lesson|you can find that in these lesson", s, re.IGNORECASE)
             ]
         if response_mode == "source_request":
             max_content = 2
@@ -726,7 +726,7 @@ class CoachAgent:
         if limited:
             module_block = "\n\n".join(f"- {ref}" for ref in limited)
             prefix = f"{base_text}\n\n" if base_text else ""
-            return f"{prefix}From your modules, you can find more detail at:\n{module_block}"
+            return f"{prefix}From your lessons, you can find more detail at:\n{module_block}"
         fallback_msg = (
             "I couldn't find a specific slide to cite for that. "
             "If you can share more detail about what you'd like to know, I can point to a specific lesson."
