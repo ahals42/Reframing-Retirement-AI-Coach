@@ -254,7 +254,6 @@ class RagRetriever:
         chunks = [
             c for c in chunks
             if not c.metadata.get("do_not_reference", False)
-            and (prefer_science or c.metadata.get("content_type") != "science")
         ]
         if prefer_science:
             # Sort science slides first, then by score descending, before truncating
