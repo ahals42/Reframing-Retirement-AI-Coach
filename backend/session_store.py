@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import logging
 import threading
 from dataclasses import dataclass, field
@@ -11,12 +10,9 @@ from typing import Callable, Dict, Optional, Set
 from uuid import uuid4
 
 from coach import CoachAgent
+from config.app_config import MAX_SESSIONS_PER_API_KEY, MAX_TOTAL_SESSIONS
 
 logger = logging.getLogger(__name__)
-
-# Security constants
-MAX_TOTAL_SESSIONS = int(os.getenv("MAX_TOTAL_SESSIONS", "1000"))  # Global limit
-MAX_SESSIONS_PER_API_KEY = int(os.getenv("MAX_SESSIONS_PER_API_KEY", "50"))  # Per-key limit
 
 
 @dataclass
