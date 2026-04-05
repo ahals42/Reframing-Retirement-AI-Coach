@@ -19,13 +19,13 @@ MAX_AUDIO_SIZE_BYTES: int = int(os.getenv("MAX_AUDIO_SIZE_MB", "10")) * 1024 * 1
 
 # --- Rate limits (requests per window, read by slowapi decorators as strings) ---
 RATE_LIMIT_MESSAGES_PER_HOUR: str = os.getenv("RATE_LIMIT_MESSAGES_PER_HOUR", "5000")
-RATE_LIMIT_SESSION_CREATION_PER_HOUR: str = os.getenv("RATE_LIMIT_SESSION_CREATION_PER_HOUR", "300")
+RATE_LIMIT_SESSION_CREATION_PER_HOUR: str = os.getenv("RATE_LIMIT_SESSION_CREATION_PER_HOUR", "1000")
 RATE_LIMIT_VOICE_CONCURRENT: str = os.getenv("RATE_LIMIT_VOICE_CONCURRENT", "20")
 RATE_LIMIT_HEALTHZ_PER_MINUTE: str = os.getenv("RATE_LIMIT_HEALTHZ_PER_MINUTE", "1000")
 
 # --- Session limits ---
-MAX_SESSIONS_PER_API_KEY: int = int(os.getenv("MAX_SESSIONS_PER_API_KEY", "500"))
-MAX_TOTAL_SESSIONS: int = int(os.getenv("MAX_TOTAL_SESSIONS", "1000"))
+MAX_SESSIONS_PER_API_KEY: int = int(os.getenv("MAX_SESSIONS_PER_API_KEY", "2000"))
+MAX_TOTAL_SESSIONS: int = int(os.getenv("MAX_TOTAL_SESSIONS", "2000"))
 
 # --- Coach / RAG thresholds ---
 LAYER_CONFIDENCE_THRESHOLD: float = 0.7
