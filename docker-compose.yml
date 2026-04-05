@@ -43,19 +43,6 @@ services:
       - QDRANT_URL=${QDRANT_URL:-http://qdrant:6333}
       - QDRANT_API_KEY=${QDRANT_API_KEY:-}
 
-      # Rate limiting configuration
-      - RATE_LIMIT_MESSAGES_PER_HOUR=${RATE_LIMIT_MESSAGES_PER_HOUR:-100}
-      - RATE_LIMIT_VOICE_CONCURRENT=${RATE_LIMIT_VOICE_CONCURRENT:-10}
-      - MAX_SESSIONS_PER_API_KEY=${MAX_SESSIONS_PER_API_KEY:-50}
-
-      # Input validation limits
-      - MAX_MESSAGE_LENGTH=${MAX_MESSAGE_LENGTH:-10000}
-      - MAX_AUDIO_SIZE_MB=${MAX_AUDIO_SIZE_MB:-10}
-      - MAX_HISTORY_MESSAGES=${MAX_HISTORY_MESSAGES:-100}
-
-      # Session management
-      - SESSION_TTL_MINUTES=${SESSION_TTL_MINUTES:-90}
-
       # Security settings
       - FORCE_HTTPS=${FORCE_HTTPS:-false}
       - ENABLE_JSON_LOGGING=${ENABLE_JSON_LOGGING:-true}
