@@ -72,6 +72,8 @@ def detect_educational_use_case(text: str, *, explicit_module_request: bool, dec
         return True
     if decision and decision.use_activities:
         return False
+    if decision and decision.prefer_science:
+        return True
     lowered = text.lower()
     return _contains_patterns(lowered, EDUCATIONAL_REQUEST_PATTERNS)
 
