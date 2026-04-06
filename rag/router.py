@@ -115,7 +115,6 @@ SCIENCE_KEYWORDS = [
     "measure",
     "scale",
     "self-report",
-    "survey",
     "finding",
     "experiment",
 ]
