@@ -107,9 +107,17 @@ SCIENCE_KEYWORDS = [
     "evidence",
     "research",
     "studies",
+    "study",
     "mechanism",
     "data",
     "proof",
+    "index",
+    "measure",
+    "scale",
+    "self-report",
+    "survey",
+    "finding",
+    "experiment",
 ]
 
 # Compiled once at import time — used in QueryRouter.route() on every message
