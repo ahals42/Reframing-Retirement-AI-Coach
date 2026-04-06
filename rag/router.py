@@ -108,7 +108,6 @@ SCIENCE_KEYWORDS = [
     "research",
     "studies",
     "study",
-    "mechanism",
     "data",
     "proof",
     "index",
@@ -117,6 +116,14 @@ SCIENCE_KEYWORDS = [
     "self-report",
     "finding",
     "experiment",
+    "m-pac",
+    "framework",
+    "intention",
+    "reflexive",
+    "regulatory",
+    "automaticity",
+    "framingham",
+    "mortality",
 ]
 
 # Compiled once at import time — used in QueryRouter.route() on every message
