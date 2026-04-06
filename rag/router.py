@@ -117,6 +117,7 @@ SCIENCE_KEYWORDS = [
     "finding",
     "experiment",
     "m-pac",
+    "mpac",
     "framework",
     "intention",
     "reflexive",
