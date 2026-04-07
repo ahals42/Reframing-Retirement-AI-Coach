@@ -190,7 +190,13 @@ async def stream_message(request: Request, session_id: str, payload: MessageRequ
             return
 
         state = record.agent.snapshot()
-        yield _as_event("done", {"text": final_reply, "state": state})
+        retrieved_context = ""
+        if record.agent.latest_retrieval is not None:
+            try:
+                retrieved_context = record.agent.latest_retrieval.build_prompt_context()
+            except Exception as ctx_exc:
+                logger.warning(f"Failed to serialize retrieved context for session {session_id}: {ctx_exc}")
+        yield _as_event("done", {"text": final_reply, "state": state, "retrieved_context": retrieved_context})
 
         logger.info(f"Completed message stream for session {session_id}")
 
