@@ -119,6 +119,11 @@ SCIENCE_KEYWORDS = [
     "automaticity",
     "framingham",
     "mortality",
+    "asymptotic",
+    "asymtotic",
+    "asymetric",
+    "asymptopic",
+    "assymptotic",
 ]
 
 # Compiled once at import time — used in QueryRouter.route() on every message
