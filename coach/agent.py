@@ -549,7 +549,7 @@ class CoachAgent:
         return (
             "You have access to retrieved slides/activities below. When relevant, ground your answer in them. "
             "Respond in a conversational tone using a maximum of three sentences total; no bullet lists or numbered lists. "
-            "If the retrieved context includes local activities, direct the user to the Resources section of the app to browse what's available nearby. Do not name specific programs, classes, or providers in your response. "
+            "If the retrieved context includes local activities, let the user know there are options available and direct them to the 'What is going on in your area?' section under Resources in the app to browse what's nearby. Do not name specific programs, classes, or providers. Add a brief note that they should check the app or website to confirm current availability. "
             "If the content is not helpful, briefly say so before proceeding without it."
         )
 
