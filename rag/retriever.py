@@ -103,11 +103,11 @@ class RetrievedChunk:
                 module = self.metadata.get("science_module_number")
                 slide = self.metadata.get("science_slide_number")
                 title = self.metadata.get("slide_title") or ""
-                return f"Science Module {module} Slide {slide}: {title}".strip()
+                return f"The Science Behind the Lessons, Page {slide}: {title}".strip()
             lesson = self.metadata.get("lesson_number")
             slide = self.metadata.get("slide_number")
             title = self.metadata.get("slide_title") or ""
-            return f"Lesson {lesson} Slide {slide}: {title}".strip()
+            return f"Lesson {lesson}, Page {slide}: {title}".strip()
         if self.doc_type == "home_activity":
             resource_type = self.metadata.get("resource_type", "resource")
             ref_num = self.metadata.get("ref_number", "?")
@@ -136,11 +136,11 @@ class RetrievedChunk:
                 module_title = re.sub(r"\s*\(\d+\s*slides?\)", "", module_title).strip()
                 slide = self.metadata.get("science_slide_number")
                 slide_title = self.metadata.get("slide_title") or "Untitled slide"
-                return f"Science Module {module}, Slide {slide}: {slide_title}"
+                return f"The Science Behind the Lessons, Page {slide}: {slide_title}"
             lesson = self.metadata.get("lesson_number")
             slide = self.metadata.get("slide_number")
             slide_title = self.metadata.get("slide_title") or "Untitled slide"
-            return f"Lesson {lesson}, Slide {slide}: {slide_title}"
+            return f"Lesson {lesson}, Page {slide}: {slide_title}"
         if self.doc_type == "activity":
             name = self.metadata.get("activity_name", "Activity")
             location = self.metadata.get("location", "Location TBD")
