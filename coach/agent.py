@@ -650,8 +650,9 @@ class CoachAgent:
         limited = references[:max_refs]
         refs_line = "; ".join(limited)
         return (
-            f"Where relevant, add a lesson reference as a natural closing sentence, using at most {max_refs} from this list: {refs_line}. "
-            "Skip it for brief conversational or acknowledgment messages. Do not invent or repeat references."
+            f"Include a brief lesson reference in your response, using at most {max_refs} from this list: {refs_line}. "
+            "Place it after your main answer but before any closing question you ask. "
+            "Omit it only for one-line conversational replies (e.g. acknowledgements). Do not invent or repeat references."
         )
 
     @staticmethod
