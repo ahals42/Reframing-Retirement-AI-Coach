@@ -55,3 +55,10 @@ anatomy/
 
 # Local-only manuscript working notes
 manuscript 1/
+
+# Reviewer notes Excel and supporting scripts
+docs/reviewer_notes_by_theme.xlsx
+scripts/fill_reviewer_notes.py
+
+# Local-only documentation assets (diagrams, images)
+docs/assets/
