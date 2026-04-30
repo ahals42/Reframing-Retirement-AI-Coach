@@ -60,5 +60,11 @@ manuscript 1/
 docs/reviewer_notes_by_theme.xlsx
 scripts/fill_reviewer_notes.py
 
-# Local-only documentation assets (diagrams, images)
-docs/assets/
+# Local-only documentation assets (new diagrams, not yet ready to commit)
+docs/assets/chatbot-data-flow.svg
+docs/assets/fastapi.svg
+docs/assets/metadata-capture.svg
+docs/assets/pathverse.png
+docs/assets/qdrant.png
+docs/assets/retrieval-pipeline.svg
+docs/assets/system-architecture.svg
