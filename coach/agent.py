@@ -615,6 +615,9 @@ class CoachAgent:
         seen = set()
         for chunk in chunks:
             ref = chunk.lesson_reference() if lesson_level else chunk.reference()
+            # "Did you know?" is a slide type, not a meaningful title — use lesson-level instead
+            if ref and not lesson_level and "did you know" in ref.lower():
+                ref = chunk.lesson_reference()
             if ref and ref not in seen:
                 seen.add(ref)
                 references.append(ref)
@@ -633,16 +636,22 @@ class CoachAgent:
         max_refs: int,
         allow: bool,
     ) -> str:
-        if not allow or not references or max_refs <= 0:
+        if not allow or max_refs <= 0:
             return (
                 "Do not mention lesson or slide names. Do not cite or reference the lessons. "
                 "Use any retrieved slide content only as background."
             )
+        if not references:
+            return (
+                "If the topic relates to a lesson in the reference guide above, add one brief lesson-level sentence "
+                "as a natural closing (for example: 'You can explore this more in Lesson 3.'). "
+                "Do not cite specific page numbers. Do not invent references for topics not covered by the guide."
+            )
         limited = references[:max_refs]
         refs_line = "; ".join(limited)
         return (
-            f"If you include lesson references, keep it to one sentence and use at most {max_refs} from this list: {refs_line}. "
-            "Do not invent or repeat references."
+            f"Where relevant, add a lesson reference as a natural closing sentence, using at most {max_refs} from this list: {refs_line}. "
+            "Skip it for brief conversational or acknowledgment messages. Do not invent or repeat references."
         )
 
     @staticmethod

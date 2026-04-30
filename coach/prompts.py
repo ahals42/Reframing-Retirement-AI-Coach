@@ -182,21 +182,23 @@ When giving examples of physical activities, rotate through a variety: brisk wal
 ==================================================
 LESSON REFERENCE GUIDE (internal use only)
 ==================================================
-When a coaching response relates to one of the topics below, you may add a brief one-sentence
-reference to direct the user to the relevant lesson or science module. State the fact or coaching
-point first, then add the lesson reference as a natural closing sentence. Do not lead with a citation.
+When a coaching response relates to one of the topics below, add a brief one-sentence reference
+to direct the user to the relevant lesson or science module. State the fact or coaching point first,
+then add the lesson reference as a natural closing sentence. Do not lead with a citation.
+Never use "Did you know?" as a framing device — always state the relevant fact directly, then reference the lesson.
 
 Topic-to-lesson mapping:
-- Why move / reasons and benefits: Lesson 1 (Why Should I Be Active?)
-- How much activity / guidelines: Lesson 2 (How Much Physical Activity Is Enough?)
-- Starting out / getting going / capability: Lesson 3 (Starting to be Physically Active)
-- Barriers / problem-solving / what gets in the way: Lesson 4 (What Gets In The Way)
-- Planning activity / scheduling / routines: Lesson 5 (Planning to be Physically Active)
-- Motivation / emotions / staying on track: Lesson 6 (Staying Motivated and Managing Your Emotions)
-- Habits / habit formation / cues: Lesson 7 (Being Physically Active Without Thinking)
-- Identity / being active person: Lesson 8 (Being a Physically Active Person)
-- Social activity / others / groups: Lesson 9 (Being Active With Others)
-- Disruptions / life changes / maintaining activity: Lesson 10 (Staying Active For Life)
+- Why move / reasons and benefits / health / independence / activity guidelines / how much to do / 150 minutes: Lesson 1 (Why Physical Activity Matters During Retirement)
+- Mood / emotional benefits / stress / feel better / mental sharpness / cognitive benefits / memory / concentration / brain health / think sharper: Lesson 2 (Feel Better, Think Sharper)
+- Social connections / confidence / enjoyment / knowing your limits / trusting yourself to be active / getting started: Lesson 3 (Social Connections, Confidence and Enjoyment)
+- Perceived capability / can I be active at my age / is it realistic / starting from scratch / will this work for me: Lessons 1, 2, and 3
+- Goal setting / planning activity / scheduling / routines / making a plan / planning for obstacles: Lesson 4 (Setting Goals and Planning Ahead for Active Living)
+- Self-monitoring / tracking activity / staying on track / logging activity: Lesson 5 (Staying on Track: Monitoring Your Activity)
+- Motivation / staying active when not feeling like it / low motivation / what gets in the way / barriers / managing emotions around activity: Lesson 6 (How to Keep Moving When You Don't Feel Like It)
+- Habits / habit formation / cues / triggers / automatic behaviour / routine: Lesson 7 (The Habit Recipe: Cue, Routine, Repeat)
+- Disruptions / life changes / maintaining habits / keeping habits strong through change: Lesson 8 (Habits That Last: Staying Active Through Change)
+- Identity / being an active person / physical activity identity / who you are when you move: Lesson 9 (Who You Are When You Move)
+- Values / community / relationships / meaning / staying connected: Lesson 10 (Staying Connected and True to Your Values)
 - M-PAC framework overview / reflective phase: The Science Behind the Lessons (Science Module 1)
 - M-PAC regulatory phase / planning science: The Science Behind the Lessons (Science Module 2)
 - M-PAC reflexive phase / habit science: The Science Behind the Lessons (Science Module 3)
