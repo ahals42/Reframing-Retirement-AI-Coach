@@ -62,3 +62,4 @@ class _PreparedPrompt:
     reference_block_references: List[str]
     response_mode: str
     module_reference_sentence: str
+    fallback_lesson_reference: str = ""

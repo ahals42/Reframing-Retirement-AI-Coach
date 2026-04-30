@@ -178,6 +178,7 @@ class CoachAgent:
             response_mode=prepared.response_mode,
             module_reference_sentence=prepared.module_reference_sentence,
         )
+        assistant_reply = self._ensure_lesson_reference(assistant_reply, prepared)
         assistant_reply = self._maybe_append_citations(assistant_reply, prepared)
         assistant_reply = self._replace_em_dash(assistant_reply)
         self._record_exchange(user_input, assistant_reply)
@@ -228,7 +229,8 @@ class CoachAgent:
             yield text
 
         assistant_reply = "".join(response_chunks).strip()
-        final_reply = self._maybe_append_citations(assistant_reply, prepared)
+        final_reply = self._ensure_lesson_reference(assistant_reply, prepared)
+        final_reply = self._maybe_append_citations(final_reply, prepared)
         final_reply = self._replace_em_dash(final_reply)
         trailing = final_reply[len(assistant_reply) :]
         if trailing:
@@ -463,6 +465,12 @@ class CoachAgent:
             response_instruction=response_instruction,
             module_reference_instruction=module_reference_instruction,
         )
+        fallback_lesson_reference = ""
+        if response_mode == "default" and selected_references:
+            ref = selected_references[0]
+            lesson_match = re.match(r"(Lesson \d+|The Science Behind Lessons [0-9–-]+[^,]*)", ref)
+            if lesson_match:
+                fallback_lesson_reference = f"You can explore this further in {lesson_match.group(1)}."
         return _PreparedPrompt(
             messages=messages,
             needs_citations=source_request and response_mode in {"default", "source_request", "educational"},
@@ -471,6 +479,7 @@ class CoachAgent:
             reference_block_references=reference_block_references,
             response_mode=response_mode,
             module_reference_sentence=module_reference_sentence,
+            fallback_lesson_reference=fallback_lesson_reference,
         )
 
     def _maybe_append_citations(self, text: str, prepared: _PreparedPrompt) -> str:
@@ -478,6 +487,14 @@ class CoachAgent:
             return text
         max_refs = len(prepared.reference_block_references)
         return self._append_reference_block(text, prepared.reference_block_references, max_refs=max_refs)
+
+    def _ensure_lesson_reference(self, text: str, prepared: _PreparedPrompt) -> str:
+        """Append fallback lesson reference for default-mode responses that lack one."""
+        if prepared.response_mode != "default" or not prepared.fallback_lesson_reference:
+            return text
+        if re.search(r"\bLesson\s+\d+\b|The Science Behind Lessons", text, re.IGNORECASE):
+            return text
+        return f"{text} {prepared.fallback_lesson_reference}"
 
     def _record_exchange(self, user_input: str, assistant_reply: str) -> None:
         """
