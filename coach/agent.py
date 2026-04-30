@@ -546,7 +546,7 @@ class CoachAgent:
         return (
             "You have access to retrieved slides/activities below. When relevant, ground your answer in them. "
             "Respond in a conversational tone using a maximum of three sentences total; no bullet lists or numbered lists. "
-            "If the retrieved context includes local activities, mention relevant options by name with location details. Always add a brief note that schedules can change and they should check the app or the venue before heading out. "
+            "If the retrieved context includes local activities, mention relevant options by name with location details. Always add a brief note that schedules can change and they should check the app or contact the organizer directly before heading out. "
             "If the content is not helpful, briefly say so before proceeding without it."
         )
 
