@@ -18,6 +18,12 @@ from qdrant_client import QdrantClient
 from rag.config import RagConfig
 from rag.router import ActivityFilters, RouteDecision
 
+_SCIENCE_MODULE_NAMES = {
+    1: "The Science Behind Lessons 1-3 (WHY to be Active)",
+    2: "The Science Behind Lessons 4-6 (HOW to be Active)",
+    3: "The Science Behind Lessons 7-10 (Sustaining Your Changes)",
+}
+
 logger = logging.getLogger(__name__)
 
 _RAG_CACHE_SIZE = 256  # Max cached (query, decision) results per retriever instance
@@ -101,9 +107,10 @@ class RetrievedChunk:
         if self.doc_type == "master":
             if self.metadata.get("content_type") == "science":
                 module = self.metadata.get("science_module_number")
+                module_name = _SCIENCE_MODULE_NAMES.get(module, f"Science Module {module}")
                 slide = self.metadata.get("science_slide_number")
                 title = self.metadata.get("slide_title") or ""
-                return f"The Science Behind the Lessons, Page {slide}: {title}".strip()
+                return f"{module_name}, Page {slide}: {title}".strip()
             lesson = self.metadata.get("lesson_number")
             slide = self.metadata.get("slide_number")
             title = self.metadata.get("slide_title") or ""
@@ -122,7 +129,8 @@ class RetrievedChunk:
         """Return a lesson-level reference (no slide info)."""
         if self.doc_type == "master":
             if self.metadata.get("content_type") == "science":
-                return self.reference()
+                module = self.metadata.get("science_module_number")
+                return _SCIENCE_MODULE_NAMES.get(module, f"Science Module {module}")
             lesson = self.metadata.get("lesson_number")
             lesson_title = self.metadata.get("lesson_title") or "Untitled lesson"
             return f"Lesson {lesson}: {lesson_title}"
@@ -132,11 +140,10 @@ class RetrievedChunk:
         if self.doc_type == "master":
             if self.metadata.get("content_type") == "science":
                 module = self.metadata.get("science_module_number")
-                module_title = self.metadata.get("science_module_title") or "Untitled module"
-                module_title = re.sub(r"\s*\(\d+\s*slides?\)", "", module_title).strip()
+                module_name = _SCIENCE_MODULE_NAMES.get(module, f"Science Module {module}")
                 slide = self.metadata.get("science_slide_number")
                 slide_title = self.metadata.get("slide_title") or "Untitled slide"
-                return f"The Science Behind the Lessons, Page {slide}: {slide_title}"
+                return f"{module_name}, Page {slide}: {slide_title}"
             lesson = self.metadata.get("lesson_number")
             slide = self.metadata.get("slide_number")
             slide_title = self.metadata.get("slide_title") or "Untitled slide"

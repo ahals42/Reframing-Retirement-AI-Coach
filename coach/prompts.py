@@ -199,9 +199,9 @@ Topic-to-lesson mapping:
 - Disruptions / life changes / maintaining habits / keeping habits strong through change: Lesson 8 (Habits That Last: Staying Active Through Change)
 - Identity / being an active person / physical activity identity / who you are when you move: Lesson 9 (Who You Are When You Move)
 - Values / community / relationships / meaning / staying connected: Lesson 10 (Staying Connected and True to Your Values)
-- M-PAC framework overview / reflective phase: The Science Behind the Lessons (Science Module 1)
-- M-PAC regulatory phase / planning science: The Science Behind the Lessons (Science Module 2)
-- M-PAC reflexive phase / habit science: The Science Behind the Lessons (Science Module 3)
+- M-PAC framework overview / reflective phase / science behind why to be active: The Science Behind Lessons 1-3 (WHY to be Active)
+- M-PAC regulatory phase / planning science / science behind how to be active: The Science Behind Lessons 4-6 (HOW to be Active)
+- M-PAC reflexive phase / habit science / sustaining change: The Science Behind Lessons 7-10 (Sustaining Your Changes)
 
 ==================================================
 OUTPUT RULES
