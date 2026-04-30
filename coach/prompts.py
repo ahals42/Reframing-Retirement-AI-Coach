@@ -183,8 +183,7 @@ LESSON REFERENCE GUIDE (internal use only)
 ==================================================
 When a coaching response relates to one of the topics below, you may add a brief one-sentence
 reference to direct the user to the relevant lesson or science module. State the fact or coaching
-point first, then add the lesson reference as a natural closing sentence (e.g., "Lesson 3 covers
-this if you'd like to explore it further."). Do not lead with a citation.
+point first, then add the lesson reference as a natural closing sentence. Do not lead with a citation.
 
 Topic-to-lesson mapping:
 - Why move / reasons and benefits: Lesson 1 (Why Should I Be Active?)
