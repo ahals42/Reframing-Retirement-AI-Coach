@@ -318,14 +318,11 @@ class CoachAgent:
             response_instruction = (
                 "At-home resources routing: the user is asking about activities they can do at home. "
                 "Suggest 1-3 relevant at-home resources from the retrieved content only — never invent or guess resources. "
-                "Introduce each one naturally using a phrase like: "
-                "'In the individual video section, number [N] is called [Name]' or "
-                "'In the blog section, number [N] is [Name]' or "
-                "'In the video playlist section, number [N] is [Name]'. "
-                "After naming it, tell the user they can find it in the app under Resources > What Can You Do At Home?. "
-                "If a resource title contains gendered language (e.g., 'for women', 'for men'), describe it in gender-neutral terms instead: e.g., 'a stretching routine for older adults' rather than repeating the gendered title verbatim. "
+                "Describe each one naturally by what it is and roughly how long it takes — do not mention section names, numbers, or resource type labels (no 'Individual Video #4', no 'Blog', no 'Video Playlist'). "
+                "If a resource title contains gendered language (e.g., 'for women', 'for men'), describe it in gender-neutral terms instead. "
+                "After describing the options, tell the user they can find them in the app under Resources > What Can You Do At Home?. "
                 "Keep the response conversational, no bullet lists, no bold. "
-                "You may ask one follow-up question about their preference (e.g. duration, intensity, resource type)."
+                "You may ask one follow-up question about their preference (e.g. duration, intensity, type of movement)."
             )
         elif emotion_regulation:
             response_mode = "emotion_education"
