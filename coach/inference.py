@@ -152,6 +152,26 @@ EDUCATIONAL_REQUEST_PATTERNS: List[Pattern] = [
     # Habit cues - habit formation vocabulary without an activity anchor word.
     re.compile(r"\b(?:why\s+do|how\s+do|what\s+makes)\s+(?:a\s+)?cues?\b", re.IGNORECASE),
     re.compile(r"\bwhat\s+(?:is|makes)\s+a\s+good\s+cue\b", re.IGNORECASE),
+    # Habit longevity - timeline and durability questions that lack activity anchor words.
+    re.compile(r"\bhow\s+long\b.{0,50}\bhabit\b", re.IGNORECASE),
+    re.compile(r"\bhabit\b.{0,40}\b(?:last|stick|going|strong|break|fade)\b", re.IGNORECASE),
+    re.compile(r"\bfall\s+(?:out\s+of|off)\b.{0,30}\bhabit\b", re.IGNORECASE),
+    # Self-monitoring - tracking questions that lack explicit activity anchor words.
+    re.compile(r"\bself.monitor(?:ing)?\b", re.IGNORECASE),
+    re.compile(r"\btrack\b.{0,50}\b(?:activity|activities|exercise|movement|steps|progress)\b", re.IGNORECASE),
+    re.compile(r"\bkeep\s+(?:tabs|track)\b", re.IGNORECASE),
+    # Intention-behaviour gap - named construct without activity anchor word.
+    re.compile(r"\bintention.behavi(?:ou?r)\b", re.IGNORECASE),
+    # Identity (explanatory framing) - "see myself as active" questions.
+    # Personal coaching moments ("become an active person", "will I fit in") are excluded.
+    re.compile(r"\bsee(?:ing)?\s+(?:my)?self\s+as\b.{0,40}\bactive\b", re.IGNORECASE),
+    # Capability (factual framing) - population-level questions about older adults.
+    # Personal coaching moments ("is it realistic for me", "can I trust my limits") are excluded.
+    re.compile(r"\bcan\s+older\s+adults?\b", re.IGNORECASE),
+    re.compile(r"\btoo\s+old\s+to\b", re.IGNORECASE),
+    re.compile(r"\b(?:safe|okay|ok)\s+for\s+older\s+adults?\b", re.IGNORECASE),
+    # Reactive regulation gap - phrasing variant not caught by existing self-talk patterns.
+    re.compile(r"\bwhat\s+(?:should|can)\s+i\s+say\s+to\s+(?:my)?self\b", re.IGNORECASE),
 ]
 
 # Patterns for detecting explicit MPAC framework questions
