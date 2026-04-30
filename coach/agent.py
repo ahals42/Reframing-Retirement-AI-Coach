@@ -323,6 +323,7 @@ class CoachAgent:
                 "'In the blog section, number [N] is [Name]' or "
                 "'In the video playlist section, number [N] is [Name]'. "
                 "After naming it, tell the user they can find it in the app under Resources > What Can You Do At Home?. "
+                "If a resource title contains gendered language (e.g., 'for women', 'for men'), describe it in gender-neutral terms instead: e.g., 'a stretching routine for older adults' rather than repeating the gendered title verbatim. "
                 "Keep the response conversational, no bullet lists, no bold. "
                 "You may ask one follow-up question about their preference (e.g. duration, intensity, resource type)."
             )
@@ -377,6 +378,9 @@ class CoachAgent:
             allow_module_references = True
             max_refs = 1
         elif educational_use_case:
+            allow_module_references = True
+            max_refs = 1
+        elif response_mode == "default":
             allow_module_references = True
             max_refs = 1
 
@@ -545,8 +549,7 @@ class CoachAgent:
         return (
             "You have access to retrieved slides/activities below. When relevant, ground your answer in them. "
             "Respond in a conversational tone using a maximum of three sentences total; no bullet lists or numbered lists. "
-            "If the retrieved context includes local activities, mention at least one concrete option by name (with location or schedule) before any reflective coaching. "
-            "When mentioning a local activity, tell the user they can find local activities in the app under Resources > What is going on in your area?. "
+            "If the retrieved context includes local activities, direct the user to the Resources section of the app to browse what's available nearby. Do not name specific programs, classes, or providers in your response. "
             "If the content is not helpful, briefly say so before proceeding without it."
         )
 
@@ -642,7 +645,7 @@ class CoachAgent:
         refs_line = "; ".join(limited)
         return (
             f"If you include lesson references, keep it to one sentence and use at most {max_refs} from this list: {refs_line}. "
-            "Mention that it's in the lesson (Lesson/Slide), and do not invent or repeat references."
+            "Do not invent or repeat references."
         )
 
     @staticmethod
@@ -676,7 +679,25 @@ class CoachAgent:
 
     @staticmethod
     def _replace_em_dash(text: str) -> str:
-        return text.replace("—", "-")
+        text = text.replace("—", "-")
+        replacements = {
+            "behavior": "behaviour",
+            "behaviors": "behaviours",
+            "favorite": "favourite",
+            "favorites": "favourites",
+            "color": "colour",
+            "colors": "colours",
+            "honor": "honour",
+            "honors": "honours",
+            "center": "centre",
+            "centers": "centres",
+            "recognize": "recognise",
+            "recognizes": "recognises",
+        }
+        for american, canadian in replacements.items():
+            text = text.replace(american, canadian)
+            text = text.replace(american.capitalize(), canadian.capitalize())
+        return text
 
     @staticmethod
     def _split_sentences(text: str) -> List[str]:
