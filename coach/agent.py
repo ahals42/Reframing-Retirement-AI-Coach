@@ -367,8 +367,10 @@ class CoachAgent:
         ):
             context_block = None
             routing_instruction = (
-                "The user is asking about activities generally. Direct them to Resources > What is going on in your area "
-                "to browse what's available. Ask one natural follow-up question — "
+                "The user is asking about activities generally. Direct them to browse the 'What is going on in your area' "
+                "section in Resources. Phrase it naturally — for example: 'The What is going on in your area section in "
+                "Resources is a good place to start' or 'You can browse local options in the What is going on in your "
+                "area section under Resources.' Ask one natural follow-up question — "
                 "either where they tend to be based (neighbourhood or part of the city) or what kind of activity "
                 "interests them — so you can help them narrow it down if they want. "
                 "Do not list or suggest specific activities or venues."
