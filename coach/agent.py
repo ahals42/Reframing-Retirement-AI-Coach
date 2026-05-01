@@ -334,16 +334,30 @@ class CoachAgent:
             )
         elif home_request:
             response_mode = "home_resources"
-            response_instruction = (
-                "At-home resources routing: the user is asking about activities they can do at home. "
-                "Suggest 1-3 relevant at-home resources from the retrieved content only — never invent or guess resources. "
-                "Name each resource by its title and briefly describe what it involves and roughly how long it takes. "
-                "Do not mention section numbers or resource type labels (no 'Individual Video #4', no 'Video Playlist'). Do not use the word 'blog' — refer to reading resources as 'a short read' or 'a resource in Reframing Retirement'. "
-                "If a resource title contains gendered language (e.g., 'for women', 'for men'), describe it in gender-neutral terms instead. "
-                "Tell the user they can find resources like these under Resources > What Can You Do At Home?. "
-                "Keep the response conversational, no bullet lists, no bold. "
-                "You may ask one follow-up question about their preference (e.g. duration, intensity, type of movement)."
-            )
+            if decision and not decision.activity_filters:
+                # General home query — direct to Resources to browse rather than listing specific resources.
+                # Keep response_mode as home_resources so the carryover fires when the user follows up
+                # with a type preference.
+                context_block = None
+                response_instruction = (
+                    "The user is asking generally about home activities. Direct them to the "
+                    "What Can You Do At Home? section in Resources to browse options. "
+                    "Phrase it naturally, for example: 'A good place to start is the What Can You Do At Home? "
+                    "section in Resources.' Ask one natural follow-up question about what kind of movement "
+                    "interests them (e.g. strength, gentle walking, flexibility, yoga) so you can help them "
+                    "find something specific if they want. Do not list or suggest specific resources or videos."
+                )
+            else:
+                response_instruction = (
+                    "At-home resources routing: the user is asking about activities they can do at home. "
+                    "Suggest 1-3 relevant at-home resources from the retrieved content only — never invent or guess resources. "
+                    "Name each resource by its title and briefly describe what it involves and roughly how long it takes. "
+                    "Do not mention section numbers or resource type labels (no 'Individual Video #4', no 'Video Playlist'). Do not use the word 'blog' — refer to reading resources as 'a short read' or 'a resource in Reframing Retirement'. "
+                    "If a resource title contains gendered language (e.g., 'for women', 'for men'), describe it in gender-neutral terms instead. "
+                    "Tell the user they can find resources like these under Resources > What Can You Do At Home?. "
+                    "Keep the response conversational, no bullet lists, no bold. "
+                    "You may ask one follow-up question about their preference (e.g. duration, intensity, type of movement)."
+                )
         elif emotion_regulation:
             response_mode = "emotion_education"
             response_instruction = (
