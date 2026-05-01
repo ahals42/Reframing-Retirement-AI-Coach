@@ -70,12 +70,17 @@ def detect_educational_use_case(text: str, *, explicit_module_request: bool, dec
     """Detect if user is asking educational questions about physical activity."""
     if explicit_module_request:
         return True
+    lowered = text.lower()
+    # Educational pattern match takes priority over the use_activities guard.
+    # Generic words like "activity" appear in both self-monitoring and discovery queries,
+    # so the pattern match is a stronger signal than the keyword flag alone.
+    if _contains_patterns(lowered, EDUCATIONAL_REQUEST_PATTERNS):
+        return True
     if decision and decision.use_activities:
         return False
     if decision and decision.prefer_science:
         return True
-    lowered = text.lower()
-    return _contains_patterns(lowered, EDUCATIONAL_REQUEST_PATTERNS)
+    return False
 
 
 def detect_mpac_question(text: str) -> bool:
