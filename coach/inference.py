@@ -122,8 +122,10 @@ EDUCATIONAL_REQUEST_PATTERNS: List[Pattern] = [
     re.compile(r"\bexplain\b.*\b(physical activity|exercise|movement|being active)\b", re.IGNORECASE),
     re.compile(r"\bhelp me understand\b.*\b(physical activity|exercise|movement|being active)\b", re.IGNORECASE),
     re.compile(r"\bwhat happens if\b.*\b(not active|inactive|sedentary)\b", re.IGNORECASE),
-    re.compile(r"\bevidence\b.*\b(physical activity|exercise|movement|being active)\b", re.IGNORECASE),
-    re.compile(r"\bresearch\b.*\b(physical activity|exercise|movement|being active)\b", re.IGNORECASE),
+    re.compile(r"\bevidence\b.*\b(physical activity|exercises?|movement|being active)\b", re.IGNORECASE),
+    re.compile(r"\bresearch\b.*\b(physical activity|exercises?|movement|being active)\b", re.IGNORECASE),
+    # "What does research/science say about X" — catches plural forms and strength/exercise combinations.
+    re.compile(r"\bwhat\s+does\s+(?:research|science|evidence)\s+say\b", re.IGNORECASE),
     re.compile(r"\btell me about\b.*\b(physical activity|exercise|movement|being active)\b", re.IGNORECASE),
     # Term-definition queries: catch "What does X mean?", "Define X", "What is an asymptotic curve?"
     # These do not require activity anchor words because lesson terminology can come from any field.
