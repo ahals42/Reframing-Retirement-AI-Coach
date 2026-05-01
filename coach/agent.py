@@ -90,6 +90,7 @@ class CoachAgent:
         self.latest_retrieval: Optional[RetrievalResult] = None
         self.last_retrieval_with_results: Optional[RetrievalResult] = None
         self._last_prefer_science: bool = False
+        self._last_response_mode: str = "default"
         if lesson_overviews is not None:
             self.lesson_overviews = lesson_overviews
         else:
@@ -162,6 +163,7 @@ class CoachAgent:
         self._validate_input(user_input)
 
         prepared = self._prepare_prompt(user_input)
+        self._last_response_mode = prepared.response_mode
         if prepared.override_citations:
             assistant_reply = prepared.override_text
             self._record_exchange(user_input, assistant_reply)
@@ -188,6 +190,7 @@ class CoachAgent:
         self._validate_input(user_input)
 
         prepared = self._prepare_prompt(user_input)
+        self._last_response_mode = prepared.response_mode
         if prepared.override_citations:
             reply = prepared.override_text
             self._record_exchange(user_input, reply)
@@ -263,6 +266,22 @@ class CoachAgent:
                     prefer_science=True,
                     home_resource_type=decision.home_resource_type,
                 )
+            # Home context carryover: if the previous turn used home_resources routing and the
+            # current message does not explicitly signal local-activity intent (a recognised
+            # location filter), keep routing to home resources so follow-up turns like
+            # "strength", "yes", or "something gentle" still retrieve home content.
+            elif (
+                self._last_response_mode == "home_resources"
+                and not decision.use_home
+                and not (decision.activity_filters and decision.activity_filters.location)
+            ):
+                decision = RouteDecision(
+                    use_master=False,
+                    use_home=True,
+                    activity_filters=decision.activity_filters,
+                    prefer_science=decision.prefer_science,
+                    home_resource_type=decision.home_resource_type,
+                )
             self._last_prefer_science = decision.prefer_science
             retrieval_result = self.retriever.gather_context(user_input, decision)
             context_block = retrieval_result.build_prompt_context() if retrieval_result else None
@@ -318,9 +337,10 @@ class CoachAgent:
             response_instruction = (
                 "At-home resources routing: the user is asking about activities they can do at home. "
                 "Suggest 1-3 relevant at-home resources from the retrieved content only — never invent or guess resources. "
-                "Describe each one naturally by what it is and roughly how long it takes — do not mention section names, numbers, or resource type labels (no 'Individual Video #4', no 'Video Playlist'). Do not use the word 'blog' — refer to reading resources as 'a short read' or 'a resource in Reframing Retirement'. "
+                "Name each resource by its title and briefly describe what it involves and roughly how long it takes. "
+                "Do not mention section numbers or resource type labels (no 'Individual Video #4', no 'Video Playlist'). Do not use the word 'blog' — refer to reading resources as 'a short read' or 'a resource in Reframing Retirement'. "
                 "If a resource title contains gendered language (e.g., 'for women', 'for men'), describe it in gender-neutral terms instead. "
-                "After describing the options, tell the user they can find them under Resources > What Can You Do At Home?. "
+                "Tell the user they can find resources like these under Resources > What Can You Do At Home?. "
                 "Keep the response conversational, no bullet lists, no bold. "
                 "You may ask one follow-up question about their preference (e.g. duration, intensity, type of movement)."
             )

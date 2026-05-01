@@ -48,6 +48,7 @@ LOCATION_HINTS = {
     "fernwood": "fernwood",
     "downtown": "downtown",
     "victoria": None,  # city-wide — all activities are in Victoria, so no location filter
+    "greater victoria": None,  # city-wide, redirect to Resources
     "oaklands": "oaklands",
     "oak bay": "oak bay",
     "uplands": "oak bay",
@@ -57,6 +58,15 @@ LOCATION_HINTS = {
     "saanich": "saanich",
     "cedar hill": "cedar hill",
     "online": "online",
+    # Areas outside current activity coverage — recognized so no clarification prompt fires,
+    # but mapped to None so activity_filters remains empty and the Resources redirect triggers.
+    "north saanich": None,
+    "central saanich": None,
+    "esquimalt": None,
+    "west shore": None,
+    "westshore": None,
+    "sidney": None,
+    "sooke": None,
 }
 
 HOME_KEYWORDS = [
