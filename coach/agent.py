@@ -288,7 +288,7 @@ class CoachAgent:
         # Response mode routing determines coaching approach based on user state
         # - lowest_mpac: Educational only, no action suggestions (unmotivated users)
         # - mpac_question: Framework explanation grounded in science content
-        # - home_resources: At-home video/playlist/blog suggestions
+        # - home_resources: At-home video/playlist/reading suggestions
         # - emotion_education: Educational support for negative feelings
         # - educational: Info-focused responses for explicit knowledge requests
         # - source_request: Concise response with citations
@@ -318,7 +318,7 @@ class CoachAgent:
             response_instruction = (
                 "At-home resources routing: the user is asking about activities they can do at home. "
                 "Suggest 1-3 relevant at-home resources from the retrieved content only — never invent or guess resources. "
-                "Describe each one naturally by what it is and roughly how long it takes — do not mention section names, numbers, or resource type labels (no 'Individual Video #4', no 'Blog', no 'Video Playlist'). "
+                "Describe each one naturally by what it is and roughly how long it takes — do not mention section names, numbers, or resource type labels (no 'Individual Video #4', no 'Video Playlist'). Do not use the word 'blog' — refer to reading resources as 'a short read' or 'a resource in the app'. "
                 "If a resource title contains gendered language (e.g., 'for women', 'for men'), describe it in gender-neutral terms instead. "
                 "After describing the options, tell the user they can find them in the app under Resources > What Can You Do At Home?. "
                 "Keep the response conversational, no bullet lists, no bold. "
@@ -353,6 +353,25 @@ class CoachAgent:
             routing_instruction = (
                 "The user mentioned a location that wasn't recognized. Ask a single friendly question like "
                 "\"Do you live near or feel comfortable traveling to downtown, James Bay, Oak Bay, Saanich, Fairfield, or somewhere else nearby?\""
+            )
+
+        # General activity inquiry — no specific location or type filter set.
+        # Direct to the app's Resources section instead of listing specific venues.
+        # Only surface RAG activity content when the user has given enough specificity (location, type, etc.)
+        if (
+            decision
+            and decision.use_activities
+            and not decision.activity_filters
+            and response_mode == "default"
+            and not routing_instruction
+        ):
+            context_block = None
+            routing_instruction = (
+                "The user is asking about activities generally. Direct them to the 'What is going on in your area' "
+                "section in the app's Resources to browse what's available. Ask one natural follow-up question — "
+                "either where they tend to be based (neighbourhood or part of the city) or what kind of activity "
+                "interests them — so you can help them narrow it down if they want. "
+                "Do not list or suggest specific activities or venues."
             )
 
         allow_module_references = False
@@ -534,7 +553,7 @@ class CoachAgent:
             return (
                 "You have access to retrieved at-home resources below. These are the ONLY resources you should mention — "
                 "do not say you lack resources if they appear in the list. For each suggestion, state its section type "
-                "(Individual Video, Video Playlist, or Blog), its number, and its name. "
+                "(Individual Video or Video Playlist), its number, and its name. Do not use the word 'blog'. "
                 "Do not reference local activities or lesson slides."
             )
         if response_mode in {"emotion_education", "educational"}:
@@ -546,7 +565,7 @@ class CoachAgent:
         return (
             "You have access to retrieved slides/activities below. When relevant, ground your answer in them. "
             "Respond in a conversational tone using a maximum of three sentences total; no bullet lists or numbered lists. "
-            "If the retrieved context includes local activities, mention relevant options by name with location details. Always add a brief note that schedules can change and they should check the app or contact the organizer directly before heading out. "
+            "If the retrieved context includes local activities, mention relevant options by name with location details — only name activities that appear in the retrieved content, never invent or guess venues. Always add a brief note that schedules can change and they should check the app or contact the organizer directly before heading out. "
             "If the content is not helpful, briefly say so before proceeding without it."
         )
 

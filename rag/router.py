@@ -47,7 +47,7 @@ LOCATION_HINTS = {
     "fairfield": "fairfield",
     "fernwood": "fernwood",
     "downtown": "downtown",
-    "victoria": "victoria",
+    "victoria": None,  # city-wide — all activities are in Victoria, so no location filter
     "oaklands": "oaklands",
     "oak bay": "oak bay",
     "uplands": "oak bay",
