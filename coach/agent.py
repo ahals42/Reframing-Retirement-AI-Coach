@@ -568,6 +568,7 @@ class CoachAgent:
             "You have access to retrieved slides/activities below. When relevant, ground your answer in them. "
             "Respond in a conversational tone using a maximum of three sentences total; no bullet lists or numbered lists. "
             "If the retrieved context includes local activities, mention relevant options by name with location details — only name activities that appear in the retrieved content, never invent or guess venues. Always add a brief note that schedules can change and they should check Resources or contact the organizer directly before heading out. "
+            "If the user is asking about local activities but no relevant activities appear in the retrieved context, direct them to the What is going on in your area section in Resources — do not suggest or invent venues, community centres, or clubs not present in the retrieved content. "
             "If the content is not helpful, briefly say so before proceeding without it."
         )
 
