@@ -157,8 +157,9 @@ EDUCATIONAL_REQUEST_PATTERNS: List[Pattern] = [
     re.compile(r"\bhabit\b.{0,40}\b(?:last|stick|going|strong|break|fade)\b", re.IGNORECASE),
     re.compile(r"\bfall\s+(?:out\s+of|off)\b.{0,30}\bhabit\b", re.IGNORECASE),
     # Self-monitoring - tracking questions that lack explicit activity anchor words.
+    # "activities" (plural) is excluded from the track pattern — plural almost always signals discovery intent.
     re.compile(r"\bself.monitor(?:ing)?\b", re.IGNORECASE),
-    re.compile(r"\btrack\b.{0,50}\b(?:activity|activities|exercise|movement|steps|progress)\b", re.IGNORECASE),
+    re.compile(r"\btrack\b.{0,50}\b(?:activity|exercise|movement|steps|progress)\b", re.IGNORECASE),
     re.compile(r"\bkeep\s+(?:tabs|track)\b", re.IGNORECASE),
     # Intention-behaviour gap - named construct without activity anchor word.
     re.compile(r"\bintention.behavi(?:ou?r)\b", re.IGNORECASE),
@@ -172,6 +173,19 @@ EDUCATIONAL_REQUEST_PATTERNS: List[Pattern] = [
     re.compile(r"\b(?:safe|okay|ok)\s+for\s+older\s+adults?\b", re.IGNORECASE),
     # Reactive regulation gap - phrasing variant not caught by existing self-talk patterns.
     re.compile(r"\bwhat\s+(?:should|can)\s+i\s+say\s+to\s+(?:my)?self\b", re.IGNORECASE),
+    # Mood and cognitive benefits - Lesson 2 questions that use "will/does/can" rather than "why does/is".
+    re.compile(r"\b(?:will|does|can|would)\s+(?:exercise|physical\s+activity|movement|being\s+active)\b.{0,50}\b(?:mood|concentration|memory|brain|mental|feel\s+better|think\s+(?:clearer|sharper|better))\b", re.IGNORECASE),
+    re.compile(r"\b(?:mood|concentration|memory|cognitive)\b.{0,40}\b(?:exercise|physical\s+activity|movement|being\s+active)\b", re.IGNORECASE),
+    # Habit automaticity - "make X more automatic" lacks a habit anchor word caught by existing patterns.
+    re.compile(r"\b(?:automatic|automaticity)\b.{0,40}\b(?:exercise|activity|movement|habit)\b", re.IGNORECASE),
+    re.compile(r"\b(?:exercise|activity|movement)\b.{0,40}\bautomatic\b", re.IGNORECASE),
+    # Social monitoring and ACT evidence - Lessons 4-6 and 7-10 research constructs.
+    re.compile(r"\bsocial\s+monitor(?:ing)?\b", re.IGNORECASE),
+    re.compile(r"\bself.reported\s+habit\s+index\b", re.IGNORECASE),
+    # ACT (Acceptance and Commitment Therapy) - compiled without IGNORECASE to avoid matching
+    # the common word "act". Full name also caught case-insensitively.
+    re.compile(r"\b(?:evidence|research|support)\b.{0,60}\bACT\b"),
+    re.compile(r"\bacceptance\s+and\s+commitment\b", re.IGNORECASE),
 ]
 
 # Patterns for detecting explicit MPAC framework questions
