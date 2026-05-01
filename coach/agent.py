@@ -49,6 +49,22 @@ from .inference import TECHNICAL_SUPPORT_RESPONSE, CHATBOT_HELP_RESPONSE
 
 logger = logging.getLogger(__name__)
 
+# Compiled once at import time — used in _maybe_append_mh_disclaimer() on every message
+_MH_TOPIC_PATTERNS: List[Pattern] = [
+    re.compile(r"\bdepress(ed|ion|ive)?\b", re.IGNORECASE),
+    re.compile(r"\banxi(ety|ous|ousness)\b", re.IGNORECASE),
+    re.compile(r"\bantidepressant(s)?\b", re.IGNORECASE),
+    re.compile(r"\bPTSD\b", re.IGNORECASE),
+    re.compile(r"\bOCD\b", re.IGNORECASE),
+    re.compile(r"\bgrief\b|\bgriev(e|ing)\b", re.IGNORECASE),
+    re.compile(r"\bburnout\b|\bburnt\s+out\b|\bburned\s+out\b", re.IGNORECASE),
+    re.compile(r"\bmental\s+health\b", re.IGNORECASE),
+]
+
+_MH_DISCLAIMER = (
+    "If this relates to something you're going through personally, talking with your doctor or a counsellor can be really helpful too."
+)
+
 # Compiled once at import time — used in _validate_input() on every message
 _INJECTION_PATTERNS: List[Pattern] = [
     re.compile(r"ignore\s+(?:all\s+)?(?:previous|above|prior)\s+(?:instructions|prompts?|commands?)", re.IGNORECASE),
@@ -182,6 +198,7 @@ class CoachAgent:
         )
         assistant_reply = self._maybe_append_citations(assistant_reply, prepared)
         assistant_reply = self._replace_em_dash(assistant_reply)
+        assistant_reply = self._maybe_append_mh_disclaimer(assistant_reply, user_input)
         self._record_exchange(user_input, assistant_reply)
         return assistant_reply
 
@@ -210,6 +227,7 @@ class CoachAgent:
             )
             assistant_reply = self._maybe_append_citations(assistant_reply, prepared)
             assistant_reply = self._replace_em_dash(assistant_reply)
+            assistant_reply = self._maybe_append_mh_disclaimer(assistant_reply, user_input)
             self._record_exchange(user_input, assistant_reply)
             yield assistant_reply
             return assistant_reply
@@ -233,9 +251,10 @@ class CoachAgent:
         assistant_reply = "".join(response_chunks).strip()
         final_reply = self._maybe_append_citations(assistant_reply, prepared)
         final_reply = self._replace_em_dash(final_reply)
-        trailing = final_reply[len(assistant_reply) :]
+        final_reply = self._maybe_append_mh_disclaimer(final_reply, user_input)
+        trailing = final_reply[len(assistant_reply):]
         if trailing:
-            yield self._replace_em_dash(trailing)
+            yield trailing
         self._record_exchange(user_input, final_reply)
         return final_reply
 
@@ -805,6 +824,11 @@ class CoachAgent:
                 return f"{content} {module_reference_sentence}".strip()
             return module_reference_sentence.strip()
         return content
+
+    def _maybe_append_mh_disclaimer(self, text: str, user_input: str) -> str:
+        if any(p.search(user_input) for p in _MH_TOPIC_PATTERNS):
+            return f"{text} {_MH_DISCLAIMER}"
+        return text
 
     def _needs_citations(self, user_input: str) -> bool:
         return any(pattern.search(user_input) for pattern in SOURCE_REQUEST_PATTERNS)
