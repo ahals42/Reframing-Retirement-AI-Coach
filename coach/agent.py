@@ -318,9 +318,9 @@ class CoachAgent:
             response_instruction = (
                 "At-home resources routing: the user is asking about activities they can do at home. "
                 "Suggest 1-3 relevant at-home resources from the retrieved content only — never invent or guess resources. "
-                "Describe each one naturally by what it is and roughly how long it takes — do not mention section names, numbers, or resource type labels (no 'Individual Video #4', no 'Video Playlist'). Do not use the word 'blog' — refer to reading resources as 'a short read' or 'a resource in the app'. "
+                "Describe each one naturally by what it is and roughly how long it takes — do not mention section names, numbers, or resource type labels (no 'Individual Video #4', no 'Video Playlist'). Do not use the word 'blog' — refer to reading resources as 'a short read' or 'a resource in Reframing Retirement'. "
                 "If a resource title contains gendered language (e.g., 'for women', 'for men'), describe it in gender-neutral terms instead. "
-                "After describing the options, tell the user they can find them in the app under Resources > What Can You Do At Home?. "
+                "After describing the options, tell the user they can find them under Resources > What Can You Do At Home?. "
                 "Keep the response conversational, no bullet lists, no bold. "
                 "You may ask one follow-up question about their preference (e.g. duration, intensity, type of movement)."
             )
@@ -367,8 +367,8 @@ class CoachAgent:
         ):
             context_block = None
             routing_instruction = (
-                "The user is asking about activities generally. Direct them to the 'What is going on in your area' "
-                "section in the app's Resources to browse what's available. Ask one natural follow-up question — "
+                "The user is asking about activities generally. Direct them to Resources > What is going on in your area "
+                "to browse what's available. Ask one natural follow-up question — "
                 "either where they tend to be based (neighbourhood or part of the city) or what kind of activity "
                 "interests them — so you can help them narrow it down if they want. "
                 "Do not list or suggest specific activities or venues."
@@ -565,7 +565,7 @@ class CoachAgent:
         return (
             "You have access to retrieved slides/activities below. When relevant, ground your answer in them. "
             "Respond in a conversational tone using a maximum of three sentences total; no bullet lists or numbered lists. "
-            "If the retrieved context includes local activities, mention relevant options by name with location details — only name activities that appear in the retrieved content, never invent or guess venues. Always add a brief note that schedules can change and they should check the app or contact the organizer directly before heading out. "
+            "If the retrieved context includes local activities, mention relevant options by name with location details — only name activities that appear in the retrieved content, never invent or guess venues. Always add a brief note that schedules can change and they should check Resources or contact the organizer directly before heading out. "
             "If the content is not helpful, briefly say so before proceeding without it."
         )
 
