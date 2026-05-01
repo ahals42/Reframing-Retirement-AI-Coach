@@ -407,8 +407,7 @@ class CoachAgent:
             allow_module_references = True
             max_refs = 1
         elif home_request:
-            allow_module_references = True
-            max_refs = 3
+            pass  # home resource responses don't cite lessons
         elif emotion_regulation:
             allow_module_references = True
             max_refs = 1
