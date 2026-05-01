@@ -666,16 +666,18 @@ class CoachAgent:
         if not references or max_refs <= 0:
             return ""
         limited = references[:max_refs]
-        refs_line = "; ".join(limited)
-        if tone == "direct":
-            return f"You should check out these lessons for more detail: {refs_line}."
-        return f"You can find more detail in these lessons: {refs_line}."
+        if len(limited) == 1:
+            return f"You can find more on this in {limited[0]}."
+        refs_line = "; ".join(limited[:-1]) + f" and {limited[-1]}"
+        return f"You can find more on this in {refs_line}."
 
     @staticmethod
     def _build_lesson_lookup_response(references: List[str]) -> str:
         if references:
-            refs_line = "; ".join(references)
-            return f"You can find that in these lessons: {refs_line}."
+            if len(references) == 1:
+                return f"You can find more on this in {references[0]}."
+            refs_line = "; ".join(references[:-1]) + f" and {references[-1]}"
+            return f"You can find more on this in {refs_line}."
         return "I couldn't find a specific lesson on that in the Reframing Retirement program."
 
     @staticmethod
