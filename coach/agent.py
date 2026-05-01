@@ -644,7 +644,8 @@ class CoachAgent:
         if not references:
             return (
                 "If the topic relates to a lesson in the reference guide above, add one brief lesson-level sentence "
-                "as a natural closing (for example: 'You can explore this more in Lesson 3.'). "
+                "as a natural closing. Always use the lesson number (e.g., 'You can explore this more in Lesson 4.') — "
+                "do not describe the lesson by its title without the number. "
                 "Do not cite specific page numbers. Do not invent references for topics not covered by the guide."
             )
         limited = references[:max_refs]
