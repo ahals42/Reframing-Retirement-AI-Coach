@@ -418,8 +418,10 @@ class CoachAgent:
             allow_module_references = True
             max_refs = 1
         elif response_mode == "default":
-            allow_module_references = True
-            max_refs = 1
+            # Skip lesson refs when the response is an activity lookup — they don't belong there
+            if not (decision and decision.use_activities and decision.activity_filters):
+                allow_module_references = True
+                max_refs = 1
 
         reference_source = self._select_reference_source(self.latest_retrieval)
         selected_chunks: List[RetrievedChunk] = []
