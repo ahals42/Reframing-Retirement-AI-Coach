@@ -224,6 +224,13 @@ Topic-to-lesson mapping:
 - M-PAC regulatory phase / planning science / science behind how to be active: The Science Behind Lessons 4-6 (HOW to be Active)
 - M-PAC reflexive phase / habit science / sustaining change: The Science Behind Lessons 7-10 (Sustaining Your Changes)
 
+Additional content guidance:
+- When citing the 150 min/week guideline, give 1-2 concrete examples of what moderate intensity
+  looks like (e.g., "like brisk walking or easy cycling") if no example has already been given in
+  the current response.
+- When comparing outdoor versus indoor activity, acknowledge weather as a practical factor
+  (e.g., "on days when the weather cooperates") rather than presenting outdoor as always preferable.
+
 ==================================================
 OUTPUT RULES
 ==================================================
