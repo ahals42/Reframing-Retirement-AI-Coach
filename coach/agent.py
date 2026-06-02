@@ -91,6 +91,7 @@ class CoachAgent:
         retriever: Optional[RagRetriever] = None,
         router: Optional[QueryRouter] = None,
         lesson_overviews: Optional[Dict[int, Dict[str, str]]] = None,
+        mcp_tools: Optional[List[Dict]] = None,
     ) -> None:
         self.client = client
         self.model = model
@@ -98,7 +99,7 @@ class CoachAgent:
         self.top_p = top_p
         self.max_tokens = max_tokens
         self._is_new_gen = model.startswith("gpt-5") or model.startswith("o")
-        self._token_limit_key = "max_completion_tokens" if self._is_new_gen else "max_tokens"
+        self.mcp_tools = mcp_tools or []
         self.state = ConversationState()
         self.history: List[Dict[str, str]] = []
         self.retriever = retriever
@@ -126,8 +127,7 @@ class CoachAgent:
 
     @property
     def _sampling_kwargs(self) -> dict:
-        token_limit = 4000 if self._is_new_gen else self.max_tokens
-        kwargs: dict = {self._token_limit_key: token_limit}
+        kwargs: dict = {"max_output_tokens": 4000 if self._is_new_gen else self.max_tokens}
         if not self._is_new_gen:
             kwargs["temperature"] = self.temperature
             kwargs["top_p"] = self.top_p
@@ -185,12 +185,13 @@ class CoachAgent:
             self._record_exchange(user_input, assistant_reply)
             return assistant_reply
 
-        completion = self.client.chat.completions.create(
+        completion = self.client.responses.create(
             model=self.model,
             **self._sampling_kwargs,
-            messages=prepared.messages,
+            input=prepared.messages,
+            **({"tools": self.mcp_tools} if self.mcp_tools else {}),
         )
-        assistant_reply = completion.choices[0].message.content.strip()
+        assistant_reply = completion.output_text.strip()
         assistant_reply = self._postprocess_response(
             assistant_reply,
             response_mode=prepared.response_mode,
@@ -214,12 +215,13 @@ class CoachAgent:
             yield reply
             return reply
         if prepared.response_mode in {"lowest_mpac", "emotion_education", "educational", "source_request", "mpac_question", "home_resources"}:
-            completion = self.client.chat.completions.create(
+            completion = self.client.responses.create(
                 model=self.model,
                 **self._sampling_kwargs,
-                messages=prepared.messages,
+                input=prepared.messages,
+                **({"tools": self.mcp_tools} if self.mcp_tools else {}),
             )
-            assistant_reply = completion.choices[0].message.content.strip()
+            assistant_reply = completion.output_text.strip()
             assistant_reply = self._postprocess_response(
                 assistant_reply,
                 response_mode=prepared.response_mode,
@@ -233,20 +235,18 @@ class CoachAgent:
             return assistant_reply
 
         response_chunks: List[str] = []
-        stream = self.client.chat.completions.create(
+        with self.client.responses.stream(
             model=self.model,
             **self._sampling_kwargs,
-            messages=prepared.messages,
-            stream=True,
-        )
-        for chunk in stream:
-            delta = chunk.choices[0].delta
-            text = delta.content or ""
-            text = self._replace_em_dash(text)
-            if not text:
-                continue
-            response_chunks.append(text)
-            yield text
+            input=prepared.messages,
+            **({"tools": self.mcp_tools} if self.mcp_tools else {}),
+        ) as stream:
+            for text in stream.text_deltas():
+                text = self._replace_em_dash(text)
+                if not text:
+                    continue
+                response_chunks.append(text)
+                yield text
 
         assistant_reply = "".join(response_chunks).strip()
         final_reply = self._maybe_append_citations(assistant_reply, prepared)

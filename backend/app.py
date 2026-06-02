@@ -43,6 +43,15 @@ load_dotenv()
 config = load_rag_config()
 client = OpenAI(api_key=config.openai_api_key)
 
+MCP_TOOLS = [
+    {
+        "type": "mcp",
+        "server_label": "custom_mcp",
+        "server_url": "https://v0-mocking-mcp-server.vercel.app/api/mcp",
+        "headers": {"Authorization": "Bearer secret"},
+    }
+]
+
 retriever = None
 try:
     retriever = RagRetriever(config)
@@ -61,7 +70,7 @@ except (OSError, ValueError) as exc:
 
 
 def _agent_factory() -> CoachAgent:
-    return CoachAgent(client=client, model=config.chat_model, retriever=retriever, router=QueryRouter(), lesson_overviews=_lesson_overviews)
+    return CoachAgent(client=client, model=config.chat_model, retriever=retriever, router=QueryRouter(), lesson_overviews=_lesson_overviews, mcp_tools=MCP_TOOLS)
 
 
 session_store = InMemorySessionStore(_agent_factory, ttl_minutes=SESSION_TTL_MINUTES)
