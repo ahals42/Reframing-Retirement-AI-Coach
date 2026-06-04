@@ -529,6 +529,7 @@ async function streamAssistantResponse(text) {
         if (event.type === "token") {
           botBubble.textContent += event.text;
         } else if (event.type === "done") {
+          botBubble.textContent = event.text;
           finalState = event.state;
         } else if (event.type === "error") {
           throw new Error(event.error || "Unknown error");
