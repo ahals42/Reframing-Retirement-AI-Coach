@@ -39,6 +39,10 @@ services:
       # REQUIRED: CORS allowed origins (comma-separated list)
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}
 
+      # Wearable data pipeline
+      - MCP_SERVER_URL=${MCP_SERVER_URL}
+      - MCP_TOKEN=${MCP_TOKEN}
+
       # Qdrant configuration (internal Docker network)
       - QDRANT_URL=${QDRANT_URL:-http://qdrant:6333}
       - QDRANT_API_KEY=${QDRANT_API_KEY:-}

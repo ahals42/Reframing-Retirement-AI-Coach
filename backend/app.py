@@ -20,6 +20,7 @@ from slowapi.errors import RateLimitExceeded
 
 from config.app_config import RATE_LIMIT_HEALTHZ_PER_MINUTE, SESSION_TTL_MINUTES, STREAMING_TIMEOUT_SECONDS
 from coach import CoachAgent, run_rag_sanity_check
+from wearable_pipeline import get_wearable_context
 from rag.config import load_rag_config, DATA_DIR, MASTER_FILENAME
 from rag.parsing_master import parse_lesson_overviews
 from rag.retriever import RagRetriever
@@ -120,6 +121,9 @@ async def create_session(request: Request) -> SessionCreateResponse:
         # Pass API key hash to session store for tracking
         api_key_hash = request.state.api_key[:8] if request.state.api_key else None
         session_id = session_store.create(api_key_hash=api_key_hash)
+        wearable_ctx = await get_wearable_context()
+        if agent := session_store.get_agent(session_id):
+            agent.state.wearable_context = wearable_ctx
         logger.info(f"Created session {session_id} for API key {api_key_hash}...")
         return SessionCreateResponse(session_id=session_id)
     except RuntimeError as exc:
@@ -196,6 +200,9 @@ async def stream_message(request: Request, session_id: str, payload: MessageRequ
                 retrieved_context = record.agent.latest_retrieval.build_prompt_context()
             except Exception as ctx_exc:
                 logger.warning(f"Failed to serialize retrieved context for session {session_id}: {ctx_exc}")
+        wearable = record.agent.state.wearable_context
+        if wearable:
+            final_reply += f"\n\n---\n{wearable}"
         yield _as_event("done", {"text": final_reply, "state": state, "retrieved_context": retrieved_context})
 
         logger.info(f"Completed message stream for session {session_id}")

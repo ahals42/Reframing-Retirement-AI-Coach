@@ -145,6 +145,11 @@ class InMemorySessionStore:
                 f"messages: {record.message_count})"
             )
 
+    def get_agent(self, session_id: str) -> Optional[CoachAgent]:
+        """Return the agent without side effects (does not increment message_count)."""
+        record = self._sessions.get(session_id)
+        return record.agent if record else None
+
     def _cleanup(self) -> None:
         """Remove expired sessions based on TTL."""
         cutoff = datetime.now(timezone.utc) - self._ttl
