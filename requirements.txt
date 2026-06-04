@@ -1,6 +1,7 @@
 # Core dependencies
 python-dotenv==1.2.1
 openai==2.15.0
+wearable-pipeline @ git+https://github.com/ahals42/wearable-data-pipeline@main
 
 # Vector database and RAG
 llama-index==0.14.12

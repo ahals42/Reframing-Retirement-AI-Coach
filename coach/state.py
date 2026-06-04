@@ -46,6 +46,7 @@ class ConversationState:
     barrier: str = "unknown"
     activities: str = "unknown"
     time_available: str = "unknown"
+    wearable_context: str = ""
 
     def to_prompt_mapping(self) -> Dict[str, str]:
         return asdict(self)

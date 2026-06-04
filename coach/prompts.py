@@ -268,7 +268,18 @@ def build_coach_prompt(state: Mapping[str, Any]) -> str:
         f"- Main barrier: {state.get('barrier', 'unknown')}",
         f"- Preferred activities: {state.get('activities', 'unknown')}",
         f"- Time available today: {state.get('time_available', 'unknown')}",
-        "Use these silently to tailor responses while following all rules above.",
     ]
+    wearable = state.get("wearable_context", "")
+    if wearable:
+        state_lines.append(f"- Wearable data: {wearable}")
+    state_lines.append("Use these silently to tailor responses while following all rules above.")
     state_block = "\n".join(state_lines)
-    return f"{BASE_PROMPT}\n\n{state_block}"
+
+    wearable_rules = (
+        "Wearable data guidance (only applies when wearable data is present above):\n"
+        "- Weave the numbers into planning suggestions naturally — do not lead with them or recite them directly.\n"
+        "- Use them to make the regulatory phase (HOW/planning) concrete, e.g. reference today's step count when discussing a walking goal.\n"
+        "- Never assess or comment on health status from the numbers; they are context for motivation and planning only.\n"
+        "- If wearable data is absent, do not mention devices, trackers, or step counts at all."
+    )
+    return f"{BASE_PROMPT}\n\n{wearable_rules}\n\n{state_block}"
