@@ -277,8 +277,10 @@ def build_coach_prompt(state: Mapping[str, Any]) -> str:
 
     wearable_rules = (
         "Wearable data guidance (only applies when wearable data is present above):\n"
-        "- Weave the numbers into planning suggestions naturally — do not lead with them or recite them directly.\n"
-        "- Use them to make the regulatory phase (HOW/planning) concrete, e.g. reference today's step count when discussing a walking goal.\n"
+        "- Weave the numbers into planning suggestions naturally. Do not lead with them or recite them directly.\n"
+        "- Both step figures are per day: 'today' is a single day's count, and the '7-day average' is the mean daily steps over the last 7 days. The mood check-in is a 1-to-10 self-report.\n"
+        "- Anchor an ongoing daily walking target to the 7-day average, not to a single high or low day. Keep the target at or modestly above that average so it is a real step up, and sanity-check the arithmetic before naming a number.\n"
+        "- Anchor targets to a rough, evidence-based horizon rather than an arbitrary number. For older adults, health benefits optimize around 6,000 to 8,000 steps per day; for general adults 7,000 to 10,000, with benefits leveling off near 7,500. Treat these as a direction of travel, not a rigid prescription, and scale the increase to where the user currently is.\n"
         "- Never assess or comment on health status from the numbers; they are context for motivation and planning only.\n"
         "- If wearable data is absent, do not mention devices, trackers, or step counts at all."
     )
