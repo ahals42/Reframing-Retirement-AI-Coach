@@ -1,6 +1,6 @@
 # Reframing Retirement AI Coach
 
-A conversational AI coach that helps newly retired adults build sustainable physical activity habits. This is the working version of the system, currently entering feasibility testing with participants on March 11, 2026.
+A conversational AI coach that helps newly retired adults build sustainable physical activity habits.
 
 ## What It Does
 
@@ -48,7 +48,3 @@ When a participant sends a message, the system searches a library of program con
 Voice conversations work the same way. Speech is automatically converted to text, processed the same as a typed message, and the reply is read back aloud.
 
 Everything runs on a secure cloud server. Conversations are kept private and are not stored beyond the active session.
-
-Developers can find technical documentation in the [docs/](docs/) folder.
-
-![How the AI coach works](docs/assets/ai-coach-journey.png)
