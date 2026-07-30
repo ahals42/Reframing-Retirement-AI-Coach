@@ -48,6 +48,9 @@ from .detection.detectors import (
     detect_lesson_goal_request,
     detect_week_focus_request,
     detect_generic_weekly_query,
+    detect_bare_lesson_statement,
+    detect_bare_week_statement,
+    detect_bare_number_reply,
 )
 from .inference import TECHNICAL_SUPPORT_RESPONSE, CHATBOT_HELP_RESPONSE
 from .weekly_focus import (
@@ -56,6 +59,7 @@ from .weekly_focus import (
     LESSON_TO_WEEK,
     OUT_OF_RANGE_MESSAGE,
     CLARIFYING_QUESTION,
+    ambiguous_number_question,
 )
 
 logger = logging.getLogger(__name__)
@@ -534,6 +538,19 @@ class CoachAgent:
         elif detect_generic_weekly_query(user_input):
             override_text = self._build_weekly_query_response(user_input)
             override_citations = True
+        else:
+            bare_lesson_num = detect_bare_lesson_statement(user_input)
+            bare_week_num = detect_bare_week_statement(user_input)
+            bare_number = detect_bare_number_reply(user_input)
+            if bare_lesson_num is not None:
+                override_text = LESSON_GOALS.get(bare_lesson_num, OUT_OF_RANGE_MESSAGE)
+                override_citations = True
+            elif bare_week_num is not None:
+                override_text = WEEK_FOCUS.get(bare_week_num, OUT_OF_RANGE_MESSAGE)
+                override_citations = True
+            elif bare_number is not None:
+                override_text = ambiguous_number_question(bare_number)
+                override_citations = True
         if source_request:
             prefer_science_refs = (decision.prefer_science if decision else False) or (sources_only and self._last_prefer_science)
             source_chunks = self._select_reference_chunks(

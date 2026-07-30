@@ -21,6 +21,9 @@ from ..inference import (
     extract_lesson_goal_number,
     extract_week_focus_number,
     is_generic_weekly_query,
+    extract_bare_lesson_statement,
+    extract_bare_week_statement,
+    extract_bare_number,
 )
 from ..constants import ACTIVITY_CONTEXT_KEYWORDS
 
@@ -110,6 +113,21 @@ def detect_week_focus_request(text: str) -> Optional[int]:
 def detect_generic_weekly_query(text: str) -> bool:
     """Detect a "what's my focus/goal this week" question with no lesson/week number given."""
     return is_generic_weekly_query(text)
+
+
+def detect_bare_lesson_statement(text: str) -> Optional[int]:
+    """Return the lesson number if the whole message is just a "lesson N" statement."""
+    return extract_bare_lesson_statement(text)
+
+
+def detect_bare_week_statement(text: str) -> Optional[int]:
+    """Return the week number if the whole message is just a "week N" statement."""
+    return extract_bare_week_statement(text)
+
+
+def detect_bare_number_reply(text: str) -> Optional[int]:
+    """Return the number if the whole message is just a bare 1-2 digit number."""
+    return extract_bare_number(text)
 
 
 def detect_technical_support_request(text: str) -> bool:

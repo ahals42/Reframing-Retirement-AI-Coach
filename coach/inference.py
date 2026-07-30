@@ -331,6 +331,40 @@ def extract_stated_lesson_or_week(text: str) -> tuple[Optional[int], Optional[in
     return lesson_num, week_num
 
 
+# Matches a message that is ONLY a short "lesson N" / "week N" statement (optionally
+# prefixed with "I'm on"), e.g. answering "Which lesson (or week) are you on?" with
+# "lesson 6" or "week 4" — as opposed to a longer message that merely mentions a
+# lesson/week in passing.
+BARE_LESSON_STATEMENT_PATTERN = re.compile(
+    r"^\s*(?:i'?m\s+(?:on|currently\s+on)\s+)?lesson\s+(?P<num>\d+)\s*[.!]?\s*$", re.IGNORECASE
+)
+BARE_WEEK_STATEMENT_PATTERN = re.compile(
+    r"^\s*(?:i'?m\s+(?:on|currently\s+on)\s+)?week\s+(?P<num>\d+)\s*[.!]?\s*$", re.IGNORECASE
+)
+
+# Matches a message that is ONLY a bare 1-2 digit number, e.g. answering "Which
+# lesson (or week) are you on?" with just "6" — ambiguous between lesson and week.
+BARE_NUMBER_PATTERN = re.compile(r"^\s*(?P<num>\d{1,2})\s*[.!]?\s*$")
+
+
+def extract_bare_lesson_statement(text: str) -> Optional[int]:
+    """Return the lesson number if the whole message is just "lesson N" (or "I'm on lesson N")."""
+    match = BARE_LESSON_STATEMENT_PATTERN.match(text)
+    return int(match.group("num")) if match else None
+
+
+def extract_bare_week_statement(text: str) -> Optional[int]:
+    """Return the week number if the whole message is just "week N" (or "I'm on week N")."""
+    match = BARE_WEEK_STATEMENT_PATTERN.match(text)
+    return int(match.group("num")) if match else None
+
+
+def extract_bare_number(text: str) -> Optional[int]:
+    """Return the number if the whole message is just a bare 1-2 digit number."""
+    match = BARE_NUMBER_PATTERN.match(text)
+    return int(match.group("num")) if match else None
+
+
 # Patterns to detect technical support questions about the study app or devices.
 TECHNICAL_SUPPORT_PATTERNS: List[Pattern] = [
     # Device name + connectivity/problem signal (no trailing \b — handles "connecting", "syncing", "pairing")

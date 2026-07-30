@@ -78,7 +78,13 @@ LESSON_TO_WEEK: Dict[int, int] = {
 }
 
 OUT_OF_RANGE_MESSAGE = (
-    "The program only covers Lessons 1-10 across 5 weeks, so that one is outside its scope."
+    "Sorry, that doesn't match a lesson or week in the program. The program covers "
+    "Lessons 1-10 across 5 weeks, could you clarify which lesson or week you mean?"
 )
 
 CLARIFYING_QUESTION = "Which lesson (or week) number are you currently on?"
+
+
+def ambiguous_number_question(num: int) -> str:
+    """Ask whether a bare number refers to a lesson or a week."""
+    return f"Did you mean lesson {num} or week {num}?"
