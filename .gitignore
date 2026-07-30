@@ -60,6 +60,10 @@ manuscript 1/
 docs/reviewer_notes_by_theme.xlsx
 scripts/fill_reviewer_notes.py
 
+# Local-only documentation (not public facing)
+docs/systems.md
+docs/tech-stack.md
+
 # Local-only documentation assets (new diagrams, not yet ready to commit)
 docs/assets/chatbot-data-flow.svg
 docs/assets/fastapi.svg
