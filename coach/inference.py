@@ -262,6 +262,75 @@ def extract_lesson_number(text: str) -> Optional[int]:
     return None
 
 
+# Patterns to detect "what's the goal/task for lesson X" style requests.
+# Deliberately requires a goal/task keyword next to "lesson N" so it does not
+# overlap with LESSON_OVERVIEW_PATTERNS (which answers "what is lesson X about").
+LESSON_GOAL_PATTERNS: List[Pattern] = [
+    re.compile(r"\bgoal(?:s)?\s+for\s+lesson\s+(?P<num>\d+)\b", re.IGNORECASE),
+    re.compile(r"\btask\s+for\s+lesson\s+(?P<num>\d+)\b", re.IGNORECASE),
+    re.compile(r"\blesson\s+(?P<num>\d+)\s*(?:'s)?\s+(?:goal|task)\b", re.IGNORECASE),
+    re.compile(r"\bwhat\s+(?:do|should)\s+i\s+(?:need\s+to\s+)?do\s+for\s+lesson\s+(?P<num>\d+)\b", re.IGNORECASE),
+    re.compile(r"\bwhat'?s\s+the\s+goal\s+(?:for|of)\s+lesson\s+(?P<num>\d+)\b", re.IGNORECASE),
+]
+
+# Patterns to detect "what's the focus for week X" style requests.
+WEEK_FOCUS_PATTERNS: List[Pattern] = [
+    re.compile(r"\bfocus\s+for\s+week\s+(?P<num>\d+)\b", re.IGNORECASE),
+    re.compile(r"\bfocus\s+of\s+week\s+(?P<num>\d+)\b", re.IGNORECASE),
+    re.compile(r"\bweek\s+(?P<num>\d+)\s*(?:'s)?\s+focus\b", re.IGNORECASE),
+    re.compile(r"\bwhat'?s\s+the\s+focus\s+(?:for|of)\s+week\s+(?P<num>\d+)\b", re.IGNORECASE),
+]
+
+# Matches "what's my focus/goal this week" style requests with NO lesson/week
+# number given — these require a clarifying question (or remembered state).
+GENERIC_WEEKLY_QUERY_PATTERNS: List[Pattern] = [
+    re.compile(r"\b(?:my\s+)?focus\s+(?:for\s+)?this\s+week\b", re.IGNORECASE),
+    re.compile(r"\bfocus\s+this\s+week\b", re.IGNORECASE),
+    re.compile(r"\b(?:my\s+)?goals?\s+(?:for\s+)?this\s+week\b", re.IGNORECASE),
+    re.compile(r"\bwhat'?s\s+my\s+(?:focus|goal)\b", re.IGNORECASE),
+]
+
+# Broad, passive detection of a stated lesson/week number (question or plain
+# statement), used only to remember progress across turns — not to trigger
+# an override response by itself.
+_STATED_LESSON_PATTERN = re.compile(r"\blesson\s+(?P<num>\d+)\b", re.IGNORECASE)
+_STATED_WEEK_PATTERN = re.compile(r"\bweek\s+(?P<num>\d+)\b", re.IGNORECASE)
+
+
+def extract_lesson_goal_number(text: str) -> Optional[int]:
+    """Return the lesson number if text asks for that lesson's goal/task."""
+    for pattern in LESSON_GOAL_PATTERNS:
+        match = pattern.search(text)
+        if match:
+            return int(match.group("num"))
+    return None
+
+
+def extract_week_focus_number(text: str) -> Optional[int]:
+    """Return the week number if text asks for that week's focus."""
+    for pattern in WEEK_FOCUS_PATTERNS:
+        match = pattern.search(text)
+        if match:
+            return int(match.group("num"))
+    return None
+
+
+def is_generic_weekly_query(text: str) -> bool:
+    """Return True if text asks about "this week's" focus/goals with no number given."""
+    if extract_lesson_goal_number(text) is not None or extract_week_focus_number(text) is not None:
+        return False
+    return any(pattern.search(text) for pattern in GENERIC_WEEKLY_QUERY_PATTERNS)
+
+
+def extract_stated_lesson_or_week(text: str) -> tuple[Optional[int], Optional[int]]:
+    """Return any (lesson_num, week_num) mentioned in text, for remembering progress."""
+    lesson_match = _STATED_LESSON_PATTERN.search(text)
+    week_match = _STATED_WEEK_PATTERN.search(text)
+    lesson_num = int(lesson_match.group("num")) if lesson_match else None
+    week_num = int(week_match.group("num")) if week_match else None
+    return lesson_num, week_num
+
+
 # Patterns to detect technical support questions about the study app or devices.
 TECHNICAL_SUPPORT_PATTERNS: List[Pattern] = [
     # Device name + connectivity/problem signal (no trailing \b — handles "connecting", "syncing", "pairing")

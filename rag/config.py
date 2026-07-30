@@ -14,7 +14,7 @@ load_dotenv()
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = REPO_ROOT / "data"
 
-MASTER_FILENAME = "reframing_retirement_master_data_set.txt"
+MASTER_FILENAME = "New-RR-Master-File.txt"
 ACTIVITY_FILENAME = "reframing_retirement_activity_list.txt"
 HOME_FILENAME = "What_Can_You_Do_At_Home_data_set.txt"
 

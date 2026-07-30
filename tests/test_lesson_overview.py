@@ -14,7 +14,7 @@ from coach.detection.detectors import detect_lesson_overview_request
 from coach.inference import extract_lesson_number
 from rag.parsing_master import parse_lesson_overviews
 
-DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "reframing_retirement_master_data_set.txt"
+DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "New-RR-Master-File.txt"
 
 
 # ---------------------------------------------------------------------------

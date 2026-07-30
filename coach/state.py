@@ -46,6 +46,8 @@ class ConversationState:
     barrier: str = "unknown"
     activities: str = "unknown"
     time_available: str = "unknown"
+    current_lesson: Optional[int] = None
+    current_week: Optional[int] = None
 
     def to_prompt_mapping(self) -> Dict[str, str]:
         return asdict(self)

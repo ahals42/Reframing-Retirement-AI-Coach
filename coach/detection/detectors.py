@@ -18,6 +18,9 @@ from ..inference import (
     TECHNICAL_SUPPORT_PATTERNS,
     CHATBOT_HELP_PATTERNS,
     extract_lesson_number,
+    extract_lesson_goal_number,
+    extract_week_focus_number,
+    is_generic_weekly_query,
 )
 from ..constants import ACTIVITY_CONTEXT_KEYWORDS
 
@@ -92,6 +95,21 @@ def detect_mpac_question(text: str) -> bool:
 def detect_lesson_overview_request(text: str) -> Optional[int]:
     """Return the lesson number if user is asking for an overview of a specific lesson."""
     return extract_lesson_number(text)
+
+
+def detect_lesson_goal_request(text: str) -> Optional[int]:
+    """Return the lesson number if user is asking for that lesson's goal/task."""
+    return extract_lesson_goal_number(text)
+
+
+def detect_week_focus_request(text: str) -> Optional[int]:
+    """Return the week number if user is asking for that week's focus."""
+    return extract_week_focus_number(text)
+
+
+def detect_generic_weekly_query(text: str) -> bool:
+    """Detect a "what's my focus/goal this week" question with no lesson/week number given."""
+    return is_generic_weekly_query(text)
 
 
 def detect_technical_support_request(text: str) -> bool:

@@ -29,6 +29,7 @@ from .inference import (
     infer_barrier,
     infer_activities,
     infer_time_available,
+    extract_stated_lesson_or_week,
     SOURCE_REQUEST_PATTERNS,
     ACTION_SUGGESTION_PATTERNS,
 )
@@ -44,8 +45,18 @@ from .detection.detectors import (
     detect_lesson_overview_request,
     detect_technical_support_request,
     detect_chatbot_help_request,
+    detect_lesson_goal_request,
+    detect_week_focus_request,
+    detect_generic_weekly_query,
 )
 from .inference import TECHNICAL_SUPPORT_RESPONSE, CHATBOT_HELP_RESPONSE
+from .weekly_focus import (
+    LESSON_GOALS,
+    WEEK_FOCUS,
+    LESSON_TO_WEEK,
+    OUT_OF_RANGE_MESSAGE,
+    CLARIFYING_QUESTION,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -512,6 +523,17 @@ class CoachAgent:
         elif lesson_lookup:
             override_text = self._build_lesson_lookup_response(selected_references)
             override_citations = True
+        lesson_goal_num = detect_lesson_goal_request(user_input)
+        week_focus_num = detect_week_focus_request(user_input)
+        if lesson_goal_num is not None:
+            override_text = LESSON_GOALS.get(lesson_goal_num, OUT_OF_RANGE_MESSAGE)
+            override_citations = True
+        elif week_focus_num is not None:
+            override_text = WEEK_FOCUS.get(week_focus_num, OUT_OF_RANGE_MESSAGE)
+            override_citations = True
+        elif detect_generic_weekly_query(user_input):
+            override_text = self._build_weekly_query_response(user_input)
+            override_citations = True
         if source_request:
             prefer_science_refs = (decision.prefer_science if decision else False) or (sources_only and self._last_prefer_science)
             source_chunks = self._select_reference_chunks(
@@ -756,6 +778,21 @@ class CoachAgent:
             return f"You can find more on this in {refs_line}."
         return "I couldn't find a specific lesson on that in the Reframing Retirement program."
 
+    def _build_weekly_query_response(self, user_input: str) -> str:
+        """Resolve a "what's my focus/goal this week" question with no number given.
+
+        Uses remembered progress (current_lesson/current_week) if known; asks a
+        clarifying question otherwise.
+        """
+        wants_goal = "goal" in user_input.lower()
+        if wants_goal and self.state.current_lesson is not None:
+            return LESSON_GOALS.get(self.state.current_lesson, CLARIFYING_QUESTION)
+        if self.state.current_week is not None:
+            return WEEK_FOCUS.get(self.state.current_week, CLARIFYING_QUESTION)
+        if self.state.current_lesson is not None:
+            return LESSON_GOALS.get(self.state.current_lesson, CLARIFYING_QUESTION)
+        return CLARIFYING_QUESTION
+
     @staticmethod
     def _strip_markdown(text: str) -> str:
         cleaned = text.replace("**", "").replace("__", "")
@@ -878,3 +915,10 @@ class CoachAgent:
             self.state.activities = activities
         if time_available:
             self.state.time_available = time_available
+
+        stated_lesson, stated_week = extract_stated_lesson_or_week(user_input)
+        if stated_lesson is not None:
+            self.state.current_lesson = stated_lesson
+            self.state.current_week = LESSON_TO_WEEK.get(stated_lesson)
+        elif stated_week is not None:
+            self.state.current_week = stated_week
