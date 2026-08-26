@@ -704,3 +704,27 @@ def infer_time_available(text: str) -> str | None:
     if "half hour" in text.lower():
         return "30 minutes"
     return None
+
+
+SCIENCE_FOR_LESSON_PATTERNS: List[Pattern] = [
+    re.compile(r"science.*?\blesson\s+(\d+)\b", re.IGNORECASE),
+    re.compile(r"\blesson\s+(\d+)\b.*?\bscience\b", re.IGNORECASE),
+]
+
+
+def detect_science_for_lesson(text: str) -> Optional[int]:
+    """Return the lesson number when the user asks for the science behind a lesson."""
+    for pattern in SCIENCE_FOR_LESSON_PATTERNS:
+        match = pattern.search(text or "")
+        if match:
+            return int(match.group(1))
+    return None
+
+
+def science_module_for_lesson(lesson_num: int) -> int:
+    """Map a lesson to its Science Behind module: 1-3 -> 1, 4-6 -> 2, 7-10 -> 3."""
+    if lesson_num <= 3:
+        return 1
+    if lesson_num <= 6:
+        return 2
+    return 3

@@ -53,6 +53,8 @@ from .detection.detectors import (
     detect_bare_number_reply,
 )
 from .inference import TECHNICAL_SUPPORT_RESPONSE, CHATBOT_HELP_RESPONSE
+from .inference import detect_science_for_lesson, science_module_for_lesson
+from rag.retriever import _SCIENCE_MODULE_NAMES
 from .weekly_focus import (
     LESSON_GOALS,
     WEEK_FOCUS,
@@ -288,6 +290,15 @@ class CoachAgent:
         decision: Optional[RouteDecision] = None
         sources_only_followup = detect_sources_only(user_input)
         mpac_question = detect_mpac_question(user_input)
+        stated_lesson_now, _ = extract_stated_lesson_or_week(user_input)
+        if stated_lesson_now is not None:
+            self.state.current_lesson = stated_lesson_now
+        science_lesson_num = detect_science_for_lesson(user_input)
+        if science_lesson_num is None and re.search(r"science", user_input, re.IGNORECASE) and re.search(r"\b(this|that|it)\b|\blesson\b", user_input, re.IGNORECASE):
+            science_lesson_num = self.state.current_lesson
+        science_module = None
+        if science_lesson_num is not None and science_lesson_num in self.lesson_overviews:
+            science_module = science_module_for_lesson(science_lesson_num)
         if self.retriever and not sources_only_followup:
             decision = self.router.route(user_input)
             if mpac_question:
@@ -316,8 +327,13 @@ class CoachAgent:
                     prefer_science=decision.prefer_science,
                     home_resource_type=decision.home_resource_type,
                 )
+            if science_module is not None:
+                decision = RouteDecision(
+                    use_master=True,
+                    prefer_science=True,
+                )
             self._last_prefer_science = decision.prefer_science
-            retrieval_result = self.retriever.gather_context(user_input, decision)
+            retrieval_result = self.retriever.gather_context(user_input, decision, science_module=science_module)
             context_block = retrieval_result.build_prompt_context() if retrieval_result else None
             self.latest_retrieval = retrieval_result
             if retrieval_result and (retrieval_result.master_chunks or retrieval_result.activity_chunks or retrieval_result.home_chunks):
@@ -481,6 +497,11 @@ class CoachAgent:
             )
         use_lesson_level_refs = explicit_module_request and not lesson_lookup
         selected_references = self._format_reference_list(selected_chunks, lesson_level=use_lesson_level_refs)
+        if science_lesson_num is not None:
+            module_num = science_module_for_lesson(science_lesson_num)
+            block = range((module_num - 1) * 3 + 1, module_num * 3 + 1)
+            if any(n in self.lesson_overviews for n in block):
+                selected_references = [_SCIENCE_MODULE_NAMES[module_num]]
         module_reference_sentence = ""
         module_reference_instruction: Optional[str] = None
         if response_mode in {"lowest_mpac", "emotion_education", "educational"}:
@@ -523,6 +544,9 @@ class CoachAgent:
                 f"Lesson {lesson_overview_num}: {overview['title']}. "
                 f"{overview['description']}"
             )
+            override_citations = True
+        elif science_lesson_num is not None and science_lesson_num not in self.lesson_overviews:
+            override_text = OUT_OF_RANGE_MESSAGE
             override_citations = True
         elif lesson_lookup:
             override_text = self._build_lesson_lookup_response(selected_references)

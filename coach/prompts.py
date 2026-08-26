@@ -224,6 +224,13 @@ Topic-to-lesson mapping:
 - M-PAC regulatory process / planning science / science behind how to be active: The Science Behind Lessons 4-6 (HOW to be Active)
 - M-PAC reflexive process / habit science / sustaining change: The Science Behind Lessons 7-10 (Sustaining Your Changes)
 
+SCIENCE MODULE MATCHING (strict):
+- Lessons 1-3 pair with The Science Behind Lessons 1-3 (WHY to be Active).
+- Lessons 4-6 pair with The Science Behind Lessons 4-6 (HOW to be Active).
+- Lessons 7-10 pair with The Science Behind Lessons 7-10 (Sustaining Your Changes).
+- Example: Lesson 5 (Staying on Track: Monitoring Your Activity) pairs with The Science Behind Lessons 4-6, never with Lessons 1-3.
+- Cite a science module only for the lesson block it matches. A lesson's science module must never come from another block.
+
 Additional content guidance:
 - When citing the 150 min/week guideline, give 1-2 concrete examples of what moderate intensity
   looks like (e.g., "like brisk walking or easy cycling") if no example has already been given in

@@ -8,7 +8,7 @@ const micLabel = document.getElementById("mic-label");
 const resetButton = document.getElementById("reset-session");
 
 let sessionId = null;
-let apiKey = null;
+let apiKey = "local-research";
 let typingNode = null;
 let mediaRecorder = null;
 let mediaStream = null;
@@ -31,14 +31,6 @@ setupVoiceControls();
 async function init() {
   // API key is kept in memory only — never written to sessionStorage/localStorage
   // to avoid exposure via XSS attacks.
-  if (!apiKey) {
-    apiKey = await promptForApiKey();
-    if (!apiKey) {
-      appendBotBubble("An access key is required to use the coach. Please refresh the page and enter your key.");
-      disableInput();
-      return;
-    }
-  }
 
   sessionId = sessionStorage.getItem("rr-session");
   if (!sessionId) {
@@ -56,13 +48,6 @@ async function init() {
   appendBotBubble(
     "Hi! What would you like to talk about today when it comes to physical activity?"
   );
-}
-
-function promptForApiKey() {
-  return new Promise((resolve) => {
-    const key = prompt("Please enter your access key to use the Reframing Retirement Coach:");
-    resolve(key ? key.trim() : null);
-  });
 }
 
 function disableInput() {
