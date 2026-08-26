@@ -100,7 +100,7 @@ class CoachAgent:
         client: OpenAI,
         model: str,
         *,
-        temperature: float = 0.8,
+        temperature: float = 0.3,
         top_p: float = 0.9,
         max_tokens: int = 600,
         retriever: Optional[RagRetriever] = None,
@@ -620,7 +620,10 @@ class CoachAgent:
         messages: List[Dict[str, str]] = [{"role": "system", "content": system_prompt}]
         if context_block:
             retrieval_instruction = self._build_retrieval_instruction(response_mode)
-            messages.append({"role": "system", "content": f"{retrieval_instruction}\n\n{context_block}"})
+            messages.append({
+                "role": "system",
+                "content": f"{retrieval_instruction}\n\n<retrieved_content>\n{context_block}\n</retrieved_content>",
+            })
         if response_instruction:
             messages.append({"role": "system", "content": response_instruction})
         if module_reference_instruction:
@@ -635,7 +638,9 @@ class CoachAgent:
         grounding_clause = (
             "Only state specific details, mechanisms, or examples that are explicitly present in the retrieved "
             "content below; if a detail isn't there, keep your explanation at the level of generality the content "
-            "supports rather than filling the gap from general knowledge."
+            "supports rather than filling the gap from general knowledge. When the retrieved content only "
+            "partially covers the question, prefer omitting the missing part over inferring or generalizing "
+            "past what's written."
         )
         if response_mode == "lowest_mpac":
             return (
