@@ -632,29 +632,36 @@ class CoachAgent:
         return messages
 
     def _build_retrieval_instruction(self, response_mode: str) -> str:
+        grounding_clause = (
+            "Only state specific details, mechanisms, or examples that are explicitly present in the retrieved "
+            "content below; if a detail isn't there, keep your explanation at the level of generality the content "
+            "supports rather than filling the gap from general knowledge."
+        )
         if response_mode == "lowest_mpac":
             return (
                 "You have access to retrieved slides/activities below. Use only slide content that directly "
                 "addresses the user's question. Ignore local activities unless the user explicitly asked for them. "
+                f"{grounding_clause} "
                 "If the content is not helpful, briefly say so before proceeding."
             )
         if response_mode == "mpac_question":
             return (
                 "You have access to retrieved science slides below. Use them to ground your explanation "
                 "of the M-PAC framework or the specific construct the user asked about. "
-                "Prioritise science content. Ignore local activities."
+                f"Prioritise science content. Ignore local activities. {grounding_clause}"
             )
         if response_mode == "home_resources":
             return (
                 "You have access to retrieved at-home resources below. These are the ONLY resources you should mention — "
                 "do not say you lack resources if they appear in the list. For each suggestion, state its section type "
                 "(Individual Video or Video Playlist), its number, and its name. Do not use the word 'blog'. "
-                "Do not reference local activities or lesson slides."
+                f"Do not reference local activities or lesson slides. {grounding_clause}"
             )
         if response_mode in {"emotion_education", "educational"}:
             return (
                 "You have access to retrieved slides/activities below. Use slide content when directly relevant "
                 "for educational support. Ignore local activities unless the user explicitly asked for them. "
+                f"{grounding_clause} "
                 "If the content is not helpful, briefly say so before proceeding."
             )
         return (
@@ -662,6 +669,7 @@ class CoachAgent:
             "Respond in a conversational tone using a maximum of three sentences total; no bullet lists or numbered lists. "
             "If the retrieved context includes local activities, mention relevant options by name with location details — only name activities that appear in the retrieved content, never invent or guess venues. Always add a brief note that schedules can change and they should check Resources or contact the organizer directly before heading out. "
             "If the user is asking about local activities but no relevant activities appear in the retrieved context, direct them to the What is going on in your area section in Resources — do not suggest or invent venues, community centres, or clubs not present in the retrieved content. "
+            f"{grounding_clause} "
             "If the content is not helpful, briefly say so before proceeding without it."
         )
 

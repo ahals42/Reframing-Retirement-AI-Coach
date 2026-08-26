@@ -16,6 +16,7 @@ from llama_index.vector_stores.qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 
 from rag.config import RagConfig
+from rag.parsing_master import MasterChunk, parse_master_file
 from rag.router import ActivityFilters, RouteDecision
 
 _SCIENCE_MODULE_NAMES = {
@@ -41,7 +42,7 @@ def _node_content(node: Any) -> str:
     """
     if hasattr(node, "get_content"):
         try:
-            return node.get_content(metadata_mode="all")
+            return node.get_content(metadata_mode="none")
         except TypeError:
             return node.get_content()
     return getattr(node, "text", "")
@@ -93,7 +94,11 @@ def _truncate(text: str, limit: int = 1200) -> str:
     cleaned = _sanitize_text(text)
     if len(cleaned) <= limit:
         return cleaned
-    return f"{cleaned[:limit].rstrip()}..."
+    truncated = cleaned[:limit]
+    last_boundary = max(truncated.rfind(". "), truncated.rfind(".\n"))
+    if last_boundary > limit * 0.5:
+        truncated = truncated[:last_boundary + 1]
+    return f"{truncated.rstrip()}..."
 
 
 @dataclass
@@ -231,6 +236,21 @@ class RagRetriever:
         self.activity_index = self._build_index(config.activities_collection)
         self.home_index = self._build_index(config.home_collection)
         self._cache: dict = {}  # (query, decision_key) -> RetrievalResult
+        self._master_by_global_slide: Dict[int, MasterChunk] = self._load_master_slide_index(config)
+
+    def _load_master_slide_index(self, config: RagConfig) -> Dict[int, MasterChunk]:
+        """Load the master slide deck by global_slide_number for neighbor-slide lookups.
+
+        Parses the same source file used at ingest time, so slide text/metadata here
+        matches what's embedded in Qdrant. Non-fatal on failure — neighbor stitching
+        is a context-quality enhancement, not required for retrieval to function.
+        """
+        try:
+            chunks = parse_master_file(config.master_data_path)
+            return {chunk.metadata["global_slide_number"]: chunk for chunk in chunks}
+        except Exception as exc:
+            logger.warning(f"Could not load master slide index for neighbor stitching: {exc}")
+            return {}
 
     def _build_index(self, collection_name: str) -> VectorStoreIndex:
         vector_store = QdrantVectorStore(client=self.client, collection_name=collection_name)
@@ -265,7 +285,41 @@ class RagRetriever:
         if prefer_science:
             # Sort science slides first, then by score descending, before truncating
             chunks.sort(key=lambda c: (0 if c.metadata.get("content_type") == "science" else 1, -(c.score or 0.0)))
-        return chunks[:base_top_k]
+        chunks = chunks[:base_top_k]
+        self._attach_neighbor_slides(chunks)
+        return chunks
+
+    def _attach_neighbor_slides(self, chunks: List[RetrievedChunk]) -> None:
+        """Append each chunk's immediate neighbor slide text, when it belongs to the
+        same lesson/science module. A single slide is often only part of a concept's
+        explanation; the adjacent slide frequently carries the rest of it.
+        """
+        if not self._master_by_global_slide:
+            return
+        selected_globals = {c.metadata.get("global_slide_number") for c in chunks}
+        for chunk in chunks:
+            global_num = chunk.metadata.get("global_slide_number")
+            if global_num is None:
+                continue
+            for neighbor_num in (global_num + 1, global_num - 1):
+                neighbor = self._master_by_global_slide.get(neighbor_num)
+                if not neighbor or neighbor_num in selected_globals:
+                    continue
+                if neighbor.metadata.get("do_not_reference"):
+                    continue
+                same_lesson = (
+                    chunk.metadata.get("lesson_number") is not None
+                    and neighbor.metadata.get("lesson_number") == chunk.metadata.get("lesson_number")
+                )
+                same_science_module = (
+                    chunk.metadata.get("science_module_number") is not None
+                    and neighbor.metadata.get("science_module_number") == chunk.metadata.get("science_module_number")
+                )
+                if not (same_lesson or same_science_module):
+                    continue
+                chunk.text = f"{chunk.text}\n{neighbor.text}"
+                selected_globals.add(neighbor_num)
+                break
 
     def retrieve_activities(
         self,
