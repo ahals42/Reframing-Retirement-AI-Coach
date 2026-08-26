@@ -61,7 +61,7 @@ class RagConfig:
     master_data_path: Path
     activity_data_path: Path
     home_data_path: Path
-    master_top_k: int = 5
+    master_top_k: int = 7
     activity_top_k: int = 4
     home_top_k: int = 4
 
@@ -85,7 +85,7 @@ def load_rag_config() -> RagConfig:
     activity_data_path = _path_from_env("RR_ACTIVITY_DATA_PATH", DATA_DIR / ACTIVITY_FILENAME)
     home_data_path = _path_from_env("RR_HOME_DATA_PATH", DATA_DIR / HOME_FILENAME)
 
-    master_top_k = _coerce_int(os.getenv("RR_MASTER_TOP_K"), 5)
+    master_top_k = _coerce_int(os.getenv("RR_MASTER_TOP_K"), 7)
     activity_top_k = _coerce_int(os.getenv("RR_ACTIVITY_TOP_K"), 4)
     home_top_k = _coerce_int(os.getenv("RR_HOME_TOP_K"), 4)
 
