@@ -1,102 +1,84 @@
-# For developers: Full coach (lessons 1-10)
+# Developer reference: full 1-10 version
 
-This document is for developers adding the Reframing Retirement coach to an app. It covers what this repo provides, how to run it, and how to call it.
+## Materials
 
-## What this is
-
-A chat backend (FastAPI) and reference web page for a physical activity coach limited to **all 10 lessons and The Science Behind Lessons 1-3, 4-6 and 7-10**. It replies in M-PAC aligned coaching style, grounded in the lesson material it has been given, and declines anything outside its scope.
-
-## What to take from this repo
-
-| Path | Purpose |
+| Path | Contents |
 |---|---|
-| `backend/app.py` | HTTP API: sessions, messages, health |
-| `backend/voice/` | Voice chat route (same coach behind it) |
-| `coach/` | Prompt, scope rules, reply logic, weekly focus tables |
-| `rag/` | Retrieval over the lesson content in Qdrant |
-| `data/` | Lesson content for this version: `New-RR-Master-File.txt` (all lessons and science modules), plus the activity and at-home resource lists |
-| `frontend/` | Optional reference chat page |
+| `backend/app.py` | HTTP API |
+| `backend/voice/` | Voice route |
+| `coach/` | Prompt, reply logic, weekly tables |
+| `rag/` | Retrieval and ingest |
+| `data/New-RR-Master-File.txt` | Lesson content for this version |
+| `data/` (other files) | Activity list and at-home resources |
+| `frontend/` | Reference chat page |
+| `.env.example` | Environment variables |
+| `scripts/run_local.sh` | Local launcher |
 
-## Running it locally
+## Setup
 
-1. Copy `.env.example` to `.env` and set `OPENAI_API_KEY`.
-2. First time only: `scripts/run_local.sh --ingest` (builds this version's Qdrant collections).
-3. Then: `scripts/run_local.sh`.
-4. Open http://localhost:8000.
+Requirements: Python 3.11+, Docker.
 
-The script creates its own `.venv` and starts Qdrant in Docker if needed. Qdrant dashboard: http://localhost:6333/dashboard.
+```
+cp .env.example .env          # set OPENAI_API_KEY
+scripts/run_local.sh --ingest # first run only: builds Qdrant collections
+scripts/run_local.sh          # starts server on port 8000
+```
 
-Collections for this version: `rr_master`, `rr_activities`, `rr_home`. They are separate from every other version, so ingesting here never changes another version's data.
+Qdrant dashboard: http://localhost:6333/dashboard
+
+Qdrant collections for this version: `rr_master`, `rr_activities`, `rr_home`
 
 ## API
 
-Base URL: `https://<lightsail-host>` (auto-deployed to an AWS Lightsail instance from `main`; host to be confirmed). Local: `http://localhost:8000`.
+Base URL: `https://<lightsail-host>` (auto-deployed from `main`; host to be confirmed). Local: `http://localhost:8000`.
 
-**Create a session**
-```
-POST /sessions
-→ {"session_id": "..."}
-```
+| Method | Path | Body | Response |
+|---|---|---|---|
+| POST | `/sessions` | none | `{"session_id": "..."}` |
+| POST | `/sessions/{session_id}/messages` | `{"text": "..."}` | newline-delimited JSON stream (see below) |
+| DELETE | `/sessions/{session_id}` | none | `{"message": "..."}` |
+| GET | `/healthz` | none | status object |
+| POST | `/sessions/{session_id}/voice-chat` | audio upload | spoken reply (see `backend/voice/routes.py`) |
 
-**Send a message**
-```
-POST /sessions/{session_id}/messages
-Content-Type: application/json
+Stream events, one JSON object per line:
 
-{"text": "What is physical activity?"}
-```
-
-The response is newline-delimited JSON, not Server-Sent Events. Each line is one event:
-
-- `{"type": "token", "text": "..."}`: a partial piece of the reply, streamed as it is generated.
-- `{"type": "done", "text": "...", "state": {...}, "retrieved_context": ...}`: the full reply, sent once at the end. Use `text` here if you don't want to join the token pieces.
-- `{"type": "error", "error": "..."}`: the reply failed or timed out.
-
-**Delete a session**
-```
-DELETE /sessions/{session_id}
-```
-
-**Health check**
-```
-GET /healthz
-```
-
-**Voice:** `POST /sessions/{session_id}/voice-chat` takes an audio upload and returns the spoken reply. See `backend/voice/routes.py` for the request format.
+- `{"type": "token", "text": "..."}`: partial reply text.
+- `{"type": "done", "text": "...", "state": {...}, "retrieved_context": ...}`: full reply, last event.
+- `{"type": "error", "error": "..."}`: failure or timeout.
 
 ## Authentication
 
-Send your API key in the `X-API-Key` header on every request, for example `X-API-Key: <key>`. Keys are issued by the team.
+Send the API key in the `X-API-Key` header on every request. Keys are issued by the team.
 
-## Limits and behaviour to design around
+## Limits
 
-- Messages are capped at 10,000 characters.
-- A session expires after 90 minutes without use.
-- Each session keeps up to 100 messages of history.
-- Sessions are held in memory in the server process. A restart clears them, and running several server processes needs sticky routing or a shared store (not built here).
-- Rate limits: 5,000 messages per hour and 1,000 session creations per hour.
-- A streamed reply times out after 300 seconds.
-- Conversations are not stored. The app does not keep transcripts.
+- Message: 10,000 characters maximum.
+- Session: expires after 90 minutes of inactivity.
+- History: 100 messages per session.
+- Stream timeout: 300 seconds.
+- Rate limits: 5,000 messages/hour, 1,000 session creations/hour.
+- Session store is in memory per process. Restart clears sessions.
 
-## How scope works
+## Configuration
 
-- **In scope:** the coach answers and cites the matching lesson or science module.
-- **Later content:** a question about a lesson or science module outside this version gets a specific decline that names the lesson and offers what it can cover. It does not explain the later content.
-- **Out-of-range lesson or week requests:** get the same specific decline.
-- **"Science behind lesson N":** cites the science module for that lesson's block. This version only has the modules within its scope.
-- **Medical, mental health and emergency topics:** follow the safety rules in `coach/prompts.py`. These are identical across all versions and should stay that way.
+Set in `.env`:
 
-## Where scope is set
+- `OPENAI_API_KEY`
+- `QDRANT_URL` (default `http://localhost:6333`)
+- `RR_MASTER_COLLECTION`, `RR_ACTIVITIES_COLLECTION`, `RR_HOME_COLLECTION`
+- `RR_MASTER_DATA_PATH`, `RR_ACTIVITY_DATA_PATH`, `RR_HOME_DATA_PATH` (defaults set in `rag/config.py`)
+- `OPENAI_MODEL` (default `gpt-4o-mini`), `OPENAI_EMBEDDING_MODEL` (default `text-embedding-3-large`)
 
-Edit these when changing scope:
+Other limits are in `config/app_config.py`.
 
-- `coach/prompts.py`: the topic-to-lesson map, the LATER CONTENT block and decline rules.
-- `coach/weekly_focus.py`: lesson goals, week tables and the out-of-range message.
+## Scope files
+
+- `coach/prompts.py`: topic-to-lesson map, LATER CONTENT block, decline rules, medical and safety rules.
+- `coach/weekly_focus.py`: lesson goals, week tables, out-of-range message.
 - `coach/agent.py`: lesson overview and science-for-lesson handling.
-- `data/`: the lesson file used for this version (`rag/config.py` sets it by default).
+- `data/New-RR-Master-File.txt`: the only master lesson file read by this version.
 
-## Known limits
+## Known issues
 
-- The decline wording comes from the model, so phrasing can vary slightly. Test a set of in-scope and out-of-scope questions before release.
-- Follow-up questions such as "what is the science behind this lesson" use the last lesson the user named.
-- Not production-ready as shipped: no transcript logging, in-memory sessions, and the local copies have no authentication.
+- Decline wording is generated by the model and can vary.
+- Sessions and conversation history are not persisted.
