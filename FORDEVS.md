@@ -1,84 +1,64 @@
-# Developer reference: full 1-10 version
+# Developer reference: data across versions
 
-## Materials
+## Data per version
 
-| Path | Contents |
-|---|---|
-| `backend/app.py` | HTTP API |
-| `backend/voice/` | Voice route |
-| `coach/` | Prompt, reply logic, weekly tables |
-| `rag/` | Retrieval and ingest |
-| `data/New-RR-Master-File.txt` | Lesson content for this version |
-| `data/` (other files) | Activity list and at-home resources |
-| `frontend/` | Reference chat page |
-| `.env.example` | Environment variables |
-| `scripts/run_local.sh` | Local launcher |
+| Version | Master file | Lessons | Science modules | Collections (master / activities / home) | Local port |
+|---|---|---|---|---|---|
+| 1-10 | `New-RR-Master-File.txt` | 1-10 | 1-3, 4-6, 7-10 | `rr_master` / `rr_activities` / `rr_home` | 8000 |
+| 1-6 | `lesson-6-master-file.txt` | 1-6 | 1-3, 4-6 | `rr_master_l6` / `rr_activities_l6` / `rr_home_l6` | 8001 |
+| 1-3 | `lesson-3-master-file.txt` | 1-3 | 1-3 | `rr_master_l3` / `rr_activities_l3` / `rr_home_l3` | 8002 |
 
-## Setup
+The activity list and at-home resource list are the same files in every version. Each version still has its own collections.
 
-Requirements: Python 3.11+, Docker.
+## Files
+
+- `data/`: master lesson file for the version, activity list, at-home resource list.
+- `rag/config.py`: default data paths and collection names.
+- `rag/ingest.py`: builds the Qdrant collections from the data files.
+- `.env.example`: environment variables, including the collection names.
+
+## Ingest data for this version
 
 ```
-cp .env.example .env          # set OPENAI_API_KEY
-scripts/run_local.sh --ingest # first run only: builds Qdrant collections
-scripts/run_local.sh          # starts server on port 8000
+docker compose up -d qdrant
+python -m rag.ingest
 ```
 
-Qdrant dashboard: http://localhost:6333/dashboard
+## Verify
 
-Qdrant collections for this version: `rr_master`, `rr_activities`, `rr_home`
+Open the Qdrant dashboard at http://localhost:6333/dashboard. It lists every collection from every version.
 
-## API
+To check one collection from the command line:
 
-Base URL: `https://<lightsail-host>` (auto-deployed from `main`; host to be confirmed). Local: `http://localhost:8000`.
+```
+curl -s localhost:6333/collections/rr_master
+```
 
-| Method | Path | Body | Response |
-|---|---|---|---|
-| POST | `/sessions` | none | `{"session_id": "..."}` |
-| POST | `/sessions/{session_id}/messages` | `{"text": "..."}` | newline-delimited JSON stream (see below) |
-| DELETE | `/sessions/{session_id}` | none | `{"message": "..."}` |
-| GET | `/healthz` | none | status object |
-| POST | `/sessions/{session_id}/voice-chat` | audio upload | spoken reply (see `backend/voice/routes.py`) |
+The `points_count` should match the number of slides in the master file for that version (see the counts below).
 
-Stream events, one JSON object per line:
+Expected master point counts: 1-10 = 412, 1-6 = 240, 1-3 = 131.
 
-- `{"type": "token", "text": "..."}`: partial reply text.
-- `{"type": "done", "text": "...", "state": {...}, "retrieved_context": ...}`: full reply, last event.
-- `{"type": "error", "error": "..."}`: failure or timeout.
+## Change one version's data
 
-## Authentication
+1. Edit or replace that version's master file in `data/`, or point `RR_MASTER_DATA_PATH` at a different file.
+2. Keep the collection names in `.env` unique to that version.
+3. Re-run ingest. It deletes and rebuilds only the collections named in that version's `.env`.
+4. Check the collection with the commands above.
 
-Send the API key in the `X-API-Key` header on every request. Keys are issued by the team.
+Never point two versions at the same collection names. Ingest deletes and recreates them.
 
-## Limits
+## How the version files were cut
 
-- Message: 10,000 characters maximum.
-- Session: expires after 90 minutes of inactivity.
-- History: 100 messages per session.
-- Stream timeout: 300 seconds.
-- Rate limits: 5,000 messages/hour, 1,000 session creations/hour.
-- Session store is in memory per process. Restart clears sessions.
+The lesson files are line ranges of `New-RR-Master-File.txt`:
 
-## Configuration
+- Lessons 1-3 version: lines 1-1358 (Lessons 1-3 and Science 1-3).
+- Lessons 1-6 version: lines 1-2510 (Lessons 1-6 and Science 1-3 and 4-6).
 
-Set in `.env`:
+The lesson 4 block starts at line 1359 and the lesson 7 block at line 2511 in the full file.
 
-- `OPENAI_API_KEY`
-- `QDRANT_URL` (default `http://localhost:6333`)
-- `RR_MASTER_COLLECTION`, `RR_ACTIVITIES_COLLECTION`, `RR_HOME_COLLECTION`
-- `RR_MASTER_DATA_PATH`, `RR_ACTIVITY_DATA_PATH`, `RR_HOME_DATA_PATH` (defaults set in `rag/config.py`)
-- `OPENAI_MODEL` (default `gpt-4o-mini`), `OPENAI_EMBEDDING_MODEL` (default `text-embedding-3-large`)
+## Scope text that depends on the data
 
-Other limits are in `config/app_config.py`.
+If a version's lessons change, the matching text also needs updating:
 
-## Scope files
-
-- `coach/prompts.py`: topic-to-lesson map, LATER CONTENT block, decline rules, medical and safety rules.
-- `coach/weekly_focus.py`: lesson goals, week tables, out-of-range message.
-- `coach/agent.py`: lesson overview and science-for-lesson handling.
-- `data/New-RR-Master-File.txt`: the only master lesson file read by this version.
-
-## Known issues
-
-- Decline wording is generated by the model and can vary.
-- Sessions and conversation history are not persisted.
+- `coach/prompts.py`: topic-to-lesson map and the LATER CONTENT block.
+- `coach/weekly_focus.py`: lesson goals, week tables and the out-of-range message.
