@@ -149,6 +149,10 @@ def require_api_key(func):
                 detail="Internal server error"
             )
 
+        # Local research copy: access key removed, every request uses one local identifier
+        request.state.api_key = "local-research"
+        return await func(*args, **kwargs)
+
         # Extract API key from request
         provided_key = _auth.get_api_key_from_request(request)
 

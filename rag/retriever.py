@@ -272,16 +272,31 @@ class RagRetriever:
             for node in nodes
         ]
 
-    def retrieve_master(self, query: str, top_k: Optional[int] = None, *, prefer_science: bool = False) -> List[RetrievedChunk]:
+    def retrieve_master(
+        self,
+        query: str,
+        top_k: Optional[int] = None,
+        *,
+        prefer_science: bool = False,
+        science_module: Optional[int] = None,
+    ) -> List[RetrievedChunk]:
         base_top_k = top_k or self.config.master_top_k
         # Over-fetch to ensure k chunks survive post-retrieval filtering
         # (science gating, do-not-reference). Wider net for science queries.
         retrieval_top_k = base_top_k * 3 if prefer_science else base_top_k * 2
+        if science_module is not None:
+            retrieval_top_k = base_top_k * 10
         chunks = self._retrieve_chunks(self.master_index, query, retrieval_top_k, "master")
         chunks = [
             c for c in chunks
             if not c.metadata.get("do_not_reference", False)
         ]
+        if science_module is not None:
+            chunks = [
+                c for c in chunks
+                if c.metadata.get("content_type") == "science"
+                and c.metadata.get("science_module_number") == science_module
+            ]
         if prefer_science:
             # Sort science slides first, then by score descending, before truncating
             chunks.sort(key=lambda c: (0 if c.metadata.get("content_type") == "science" else 1, -(c.score or 0.0)))
@@ -399,8 +414,8 @@ class RagRetriever:
             filters_key,
         )
 
-    def gather_context(self, query: str, decision: RouteDecision) -> RetrievalResult:
-        cache_key = (query, self._decision_key(decision))
+    def gather_context(self, query: str, decision: RouteDecision, science_module: Optional[int] = None) -> RetrievalResult:
+        cache_key = (query, self._decision_key(decision), science_module)
         if cache_key in self._cache:
             logger.debug("RAG cache hit for query: %.40s...", query)
             return self._cache[cache_key]
@@ -410,7 +425,9 @@ class RagRetriever:
         activity_type = decision.activity_filters.activity_type if decision.activity_filters else None
         tasks = {}
         if decision.use_master:
-            tasks["master"] = lambda: self.retrieve_master(query, prefer_science=decision.prefer_science)
+            tasks["master"] = lambda: self.retrieve_master(
+                query, prefer_science=decision.prefer_science, science_module=science_module
+            )
         if decision.use_activities:
             tasks["activity"] = lambda: self.retrieve_activities(query, filters=decision.activity_filters)
         if decision.use_home:
