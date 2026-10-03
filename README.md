@@ -27,3 +27,7 @@ docker compose up
 ```
 
 Then open http://localhost:8000.
+
+## Deployment
+
+The main version auto-deploys to an AWS Lightsail instance for non-local use.
