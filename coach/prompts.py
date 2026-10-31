@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Mapping
+import re
+from typing import Any, Mapping, Optional
+
+from .arms import ArmConfig
 
 
 BASE_PROMPT = """
@@ -252,7 +255,42 @@ OUTPUT RULES
 """.strip()
 
 
-def build_coach_prompt(state: Mapping[str, Any]) -> str:
+_BAR = "=" * 50
+_SECTION_RE = re.compile(re.escape(_BAR) + r"\n([^\n]+)\n" + re.escape(_BAR) + r"\n")
+_CITE_PARAGRAPH_RE = re.compile(
+    r"When a coaching response relates to one of the topics below, add a brief one-sentence reference.*?Do not lead with a citation\.",
+    re.S,
+)
+
+
+def _drop_section(prompt: str, header_prefix: str) -> str:
+    """Remove a whole section (its header block and body up to the next header), matching on header text."""
+    matches = list(_SECTION_RE.finditer(prompt))
+    for i, m in enumerate(matches):
+        if m.group(1).startswith(header_prefix):
+            end = matches[i + 1].start() if i + 1 < len(matches) else len(prompt)
+            return prompt[:m.start()] + prompt[end:]
+    raise ValueError(f"section not found: {header_prefix}")
+
+
+def arm_base_prompt(arm: Optional[ArmConfig] = None) -> str:
+    """BASE_PROMPT as modified for an experiment arm. With no arm, or the final arm, it is returned unchanged."""
+    if arm is None or (arm.cite and arm.mpac_and_lesson_guide):
+        return BASE_PROMPT
+    prompt = BASE_PROMPT
+    if not arm.mpac_and_lesson_guide:
+        prompt = _drop_section(prompt, "BEHAVIOUR CHANGE FRAMEWORK (M-PAC)")
+        prompt = _drop_section(prompt, "LESSON REFERENCE GUIDE")
+        prompt = prompt.rstrip() + "\n\nUse a motivational interviewing style."
+    elif not arm.cite:
+        new = _CITE_PARAGRAPH_RE.sub("Do not name lesson numbers, slides, pages or activities as sources.", prompt, count=1)
+        if new == prompt:
+            raise ValueError("citation paragraph not found")
+        prompt = new
+    return prompt
+
+
+def build_coach_prompt(state: Mapping[str, Any], arm: Optional[ArmConfig] = None) -> str:
     """
     Return the coach prompt enriched with the latest inferred state.
 
@@ -280,4 +318,4 @@ def build_coach_prompt(state: Mapping[str, Any]) -> str:
         "Use these silently to tailor responses while following all rules above.",
     ]
     state_block = "\n".join(state_lines)
-    return f"{BASE_PROMPT}\n\n{state_block}"
+    return f"{arm_base_prompt(arm)}\n\n{state_block}"

@@ -6,7 +6,7 @@ import html
 import re
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Dict, List, Optional, Sequence
 
 from llama_index.core import Settings, VectorStoreIndex
@@ -78,6 +78,14 @@ def _sanitize_text(text: str) -> str:
     text = text.strip()
 
     return text
+
+
+_SLIDE_LABEL_RE = re.compile(r"(?m)^\s*(?:Lesson \d+|Science Module \d+|Part \d+)\s+Slide\s+\d+(?:/\d+)?\s*")
+
+
+def _strip_slide_labels(text: str) -> str:
+    """Remove slide labels such as "Lesson 7 Slide 17" from chunk text (no-citation arms)."""
+    return _SLIDE_LABEL_RE.sub("", text)
 
 
 def _truncate(text: str, limit: int = 1200) -> str:
@@ -191,20 +199,23 @@ class RetrievalResult:
             return (2, int(ref_num))
         return (3, 0)
 
-    def build_prompt_context(self) -> str:
+    def build_prompt_context(self, show_labels: bool = True) -> str:
         sections: List[str] = []
         if self.master_chunks:
-            sections.append(self._format_section("Master slides", self.master_chunks))
+            sections.append(self._format_section("Master slides", self.master_chunks, show_labels))
         if self.activity_chunks:
-            sections.append(self._format_section("Local activities", self.activity_chunks))
+            sections.append(self._format_section("Local activities", self.activity_chunks, show_labels))
         if self.home_chunks:
-            sections.append(self._format_section("At-home resources", self.home_chunks))
+            sections.append(self._format_section("At-home resources", self.home_chunks, show_labels))
         return "\n\n".join(sections)
 
-    def _format_section(self, title: str, chunks: Sequence[RetrievedChunk]) -> str:
+    def _format_section(self, title: str, chunks: Sequence[RetrievedChunk], show_labels: bool = True) -> str:
         lines = [f"{title}:"]
         for chunk in chunks:
-            lines.append(f"- {chunk.label()}\n  {_truncate(chunk.text)}")
+            if show_labels:
+                lines.append(f"- {chunk.label()}\n  {_truncate(chunk.text)}")
+            else:
+                lines.append(f"- {_truncate(_strip_slide_labels(chunk.text))}")
         return "\n".join(lines)
 
     def references(self) -> List[str]:
@@ -222,7 +233,12 @@ class RetrievalResult:
 class RagRetriever:
     """Builds query engines for the master and activity indexes."""
 
-    def __init__(self, config: RagConfig) -> None:
+    def __init__(self, config: RagConfig, arm: Optional["ArmConfig"] = None) -> None:
+        self.arm = arm
+        self.generic = bool(arm and arm.generic_retrieval)
+        if self.generic:
+            # Lesson and science retrieval from the generic collection; resource collections are unchanged
+            config = replace(config, master_collection=arm.generic_collection, master_top_k=arm.generic_top_k)
         self.config = config
         Settings.embed_model = OpenAIEmbedding(model=config.embedding_model, api_key=config.openai_api_key)
         self.client = QdrantClient(url=config.qdrant_url, api_key=config.qdrant_api_key)
@@ -236,7 +252,7 @@ class RagRetriever:
         self.activity_index = self._build_index(config.activities_collection)
         self.home_index = self._build_index(config.home_collection)
         self._cache: dict = {}  # (query, decision_key) -> RetrievalResult
-        self._master_by_global_slide: Dict[int, MasterChunk] = self._load_master_slide_index(config)
+        self._master_by_global_slide: Dict[int, MasterChunk] = {} if self.generic else self._load_master_slide_index(config)
 
     def _load_master_slide_index(self, config: RagConfig) -> Dict[int, MasterChunk]:
         """Load the master slide deck by global_slide_number for neighbor-slide lookups.
@@ -286,6 +302,9 @@ class RagRetriever:
         retrieval_top_k = base_top_k * 3 if prefer_science else base_top_k * 2
         if science_module is not None:
             retrieval_top_k = base_top_k * 10
+        if self.generic:
+            # Generic arm: plain similarity retrieval, no metadata filters, no science-first ordering, no neighbour stitching
+            return self._retrieve_chunks(self.master_index, query, base_top_k, "master")[:base_top_k]
         chunks = self._retrieve_chunks(self.master_index, query, retrieval_top_k, "master")
         chunks = [
             c for c in chunks

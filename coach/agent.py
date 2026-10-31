@@ -64,6 +64,8 @@ from .weekly_focus import (
     ambiguous_number_question,
 )
 
+from .arms import ARMS, ArmConfig
+
 logger = logging.getLogger(__name__)
 
 # Compiled once at import time — used in _maybe_append_mh_disclaimer() on every message
@@ -107,9 +109,11 @@ class CoachAgent:
         retriever: Optional[RagRetriever] = None,
         router: Optional[QueryRouter] = None,
         lesson_overviews: Optional[Dict[int, Dict[str, str]]] = None,
+        arm: Optional[ArmConfig] = None,
     ) -> None:
         self.client = client
         self.model = model
+        self.arm = arm or ARMS["final"]
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.state = ConversationState()
@@ -329,7 +333,7 @@ class CoachAgent:
                 )
             self._last_prefer_science = decision.prefer_science
             retrieval_result = self.retriever.gather_context(user_input, decision, science_module=science_module)
-            context_block = retrieval_result.build_prompt_context() if retrieval_result else None
+            context_block = retrieval_result.build_prompt_context(show_labels=self.arm.cite) if retrieval_result else None
             self.latest_retrieval = retrieval_result
             if retrieval_result and (retrieval_result.master_chunks or retrieval_result.activity_chunks or retrieval_result.home_chunks):
                 self.last_retrieval_with_results = retrieval_result
@@ -337,6 +341,11 @@ class CoachAgent:
         source_request = self._needs_citations(user_input)
         sources_only = sources_only_followup
         lesson_lookup = detect_lesson_lookup(user_input)
+        if not self.arm.cite:
+            # No-citation arms: no lesson, slide or page references of any kind
+            source_request = False
+            sources_only = False
+            lesson_lookup = False
         explicit_module_request = source_request or detect_module_request(user_input) or lesson_lookup
         general_disinterest = detect_general_disinterest(user_input)
         lowest_mpac = detect_lowest_mpac(user_input) or general_disinterest
@@ -482,6 +491,8 @@ class CoachAgent:
                 allow_module_references = True
                 max_refs = 1
 
+        if not self.arm.cite:
+            allow_module_references = False
         reference_source = self._select_reference_source(self.latest_retrieval)
         selected_chunks: List[RetrievedChunk] = []
         if allow_module_references:
@@ -523,6 +534,9 @@ class CoachAgent:
                 allow=allow_module_references,
             )
 
+        if not self.arm.cite:
+            module_reference_sentence = ""
+            module_reference_instruction = self._build_module_reference_instruction([], max_refs=0, allow=False)
         override_citations = False
         override_text = ""
         reference_block_references: List[str] = []
@@ -635,7 +649,7 @@ class CoachAgent:
         response_instruction: Optional[str] = None,
         module_reference_instruction: Optional[str] = None,
     ) -> List[Dict[str, str]]:
-        system_prompt = build_coach_prompt(self.state.to_prompt_mapping())
+        system_prompt = build_coach_prompt(self.state.to_prompt_mapping(), self.arm)
         messages: List[Dict[str, str]] = [{"role": "system", "content": system_prompt}]
         if context_block:
             retrieval_instruction = self._build_retrieval_instruction(response_mode)
