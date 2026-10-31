@@ -273,11 +273,46 @@ def _drop_section(prompt: str, header_prefix: str) -> str:
     raise ValueError(f"section not found: {header_prefix}")
 
 
+# One place for the retrieval grounding clause. "strict" is the deployed text and must stay byte-identical.
+GROUNDING_CLAUSES = {
+    "strict": (
+        "Only state specific details, mechanisms, or examples that are explicitly present in the retrieved "
+        "content below; if a detail isn't there, keep your explanation at the level of generality the content "
+        "supports rather than filling the gap from general knowledge. When the retrieved content only "
+        "partially covers the question, prefer omitting the missing part over inferring or generalizing "
+        "past what's written."
+    ),
+    "permissive": (
+        "Use the retrieved content below as your main support. If a small detail is not in the retrieved content, "
+        "you may fill the gap with general program knowledge, and when you do, make clear that it is general and "
+        "not from the retrieved content."
+    ),
+    "gap": (
+        "Answer the part of the question that the retrieved content covers, using only what is in it. If part of the "
+        "question is not covered by the retrieved content, say so in one sentence instead of omitting it or guessing, "
+        "and still answer the covered part."
+    ),
+}
+
+# Shown instead of retrieved passages when the similarity floor leaves no lesson passage (arm r1_floor).
+NO_CONTENT_NOTE = "No relevant program content was found for this message."
+ABSTAIN_INSTRUCTION = (
+    "No relevant lesson content was retrieved for this message. If the user is asking about program content or physical activity, "
+    "say plainly that you cannot find that in the program, and do not answer it from general knowledge. "
+    "All safety, referral and scope rules above still apply unchanged."
+)
+
+
 def arm_base_prompt(arm: Optional[ArmConfig] = None) -> str:
     """BASE_PROMPT as modified for an experiment arm. With no arm, or the final arm, it is returned unchanged."""
-    if arm is None or (arm.cite and arm.mpac_and_lesson_guide):
+    if arm is None:
         return BASE_PROMPT
     prompt = BASE_PROMPT
+    if not arm.safety_section:
+        prompt = _drop_section(prompt, "HARD SAFETY & SCOPE BOUNDARIES")
+    if not arm.coaching_sections:
+        prompt = _drop_section(prompt, "DEFAULT RESPONSE STRUCTURE")
+        prompt = _drop_section(prompt, "COACHING PRINCIPLES")
     if not arm.mpac_and_lesson_guide:
         prompt = _drop_section(prompt, "BEHAVIOUR CHANGE FRAMEWORK (M-PAC)")
         prompt = _drop_section(prompt, "LESSON REFERENCE GUIDE")

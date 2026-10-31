@@ -181,6 +181,8 @@ class RetrievalResult:
     master_chunks: Sequence[RetrievedChunk]
     activity_chunks: Sequence[RetrievedChunk]
     home_chunks: Sequence[RetrievedChunk] = field(default_factory=list)
+    no_relevant_master: bool = False        # similarity-floor arm: lessons were searched but no passage cleared the floor
+    rewritten_query: Optional[str] = None   # query-rewrite arm: the search query actually used (for logging)
 
     def _reference_sort_key(self, chunk: RetrievedChunk) -> tuple:
         if chunk.doc_type == "master":
@@ -199,23 +201,23 @@ class RetrievalResult:
             return (2, int(ref_num))
         return (3, 0)
 
-    def build_prompt_context(self, show_labels: bool = True) -> str:
+    def build_prompt_context(self, show_labels: bool = True, char_limit: int = 1200) -> str:
         sections: List[str] = []
         if self.master_chunks:
-            sections.append(self._format_section("Master slides", self.master_chunks, show_labels))
+            sections.append(self._format_section("Master slides", self.master_chunks, show_labels, char_limit))
         if self.activity_chunks:
-            sections.append(self._format_section("Local activities", self.activity_chunks, show_labels))
+            sections.append(self._format_section("Local activities", self.activity_chunks, show_labels, char_limit))
         if self.home_chunks:
-            sections.append(self._format_section("At-home resources", self.home_chunks, show_labels))
+            sections.append(self._format_section("At-home resources", self.home_chunks, show_labels, char_limit))
         return "\n\n".join(sections)
 
-    def _format_section(self, title: str, chunks: Sequence[RetrievedChunk], show_labels: bool = True) -> str:
+    def _format_section(self, title: str, chunks: Sequence[RetrievedChunk], show_labels: bool = True, char_limit: int = 1200) -> str:
         lines = [f"{title}:"]
         for chunk in chunks:
             if show_labels:
-                lines.append(f"- {chunk.label()}\n  {_truncate(chunk.text)}")
+                lines.append(f"- {chunk.label()}\n  {_truncate(chunk.text, char_limit)}")
             else:
-                lines.append(f"- {_truncate(_strip_slide_labels(chunk.text))}")
+                lines.append(f"- {_truncate(_strip_slide_labels(chunk.text), char_limit)}")
         return "\n".join(lines)
 
     def references(self) -> List[str]:
@@ -230,15 +232,25 @@ class RetrievalResult:
         return refs
 
 
+def _apply_arm_to_config(config: RagConfig, arm: Optional["ArmConfig"]) -> RagConfig:
+    """Retrieval settings for an experiment arm (the collection and number of passages)."""
+    if arm is None:
+        return config
+    if arm.generic_retrieval:
+        # Lesson and science retrieval from the generic collection; resource collections are unchanged
+        return replace(config, master_collection=arm.generic_collection, master_top_k=arm.generic_top_k)
+    if arm.master_top_k is not None:
+        return replace(config, master_top_k=arm.master_top_k)
+    return config
+
+
 class RagRetriever:
     """Builds query engines for the master and activity indexes."""
 
     def __init__(self, config: RagConfig, arm: Optional["ArmConfig"] = None) -> None:
         self.arm = arm
         self.generic = bool(arm and arm.generic_retrieval)
-        if self.generic:
-            # Lesson and science retrieval from the generic collection; resource collections are unchanged
-            config = replace(config, master_collection=arm.generic_collection, master_top_k=arm.generic_top_k)
+        config = _apply_arm_to_config(config, arm)
         self.config = config
         Settings.embed_model = OpenAIEmbedding(model=config.embedding_model, api_key=config.openai_api_key)
         self.client = QdrantClient(url=config.qdrant_url, api_key=config.qdrant_api_key)
@@ -320,7 +332,8 @@ class RagRetriever:
             # Sort science slides first, then by score descending, before truncating
             chunks.sort(key=lambda c: (0 if c.metadata.get("content_type") == "science" else 1, -(c.score or 0.0)))
         chunks = chunks[:base_top_k]
-        self._attach_neighbor_slides(chunks)
+        if self.arm is None or self.arm.neighbor_stitching:
+            self._attach_neighbor_slides(chunks)
         return chunks
 
     def _attach_neighbor_slides(self, chunks: List[RetrievedChunk]) -> None:
@@ -467,10 +480,18 @@ class RagRetriever:
                 for future in as_completed(future_to_name):
                     results_map[future_to_name[future]] = future.result()
 
+        floor = self.arm.similarity_floor if self.arm is not None else None
+        no_relevant_master = False
+        if floor is not None:
+            # Similarity-floor arm: keep only passages that clear the floor; abstain when no lesson passage does
+            for name, chunks in list(results_map.items()):
+                results_map[name] = [c for c in chunks if c.score is None or c.score >= floor]
+            no_relevant_master = "master" in tasks and not results_map.get("master")
         result = RetrievalResult(
             master_chunks=results_map.get("master", []),
             activity_chunks=results_map.get("activity", []),
             home_chunks=results_map.get("home", []),
+            no_relevant_master=no_relevant_master,
         )
         if len(self._cache) >= _RAG_CACHE_SIZE:
             self._cache.pop(next(iter(self._cache)))  # evict oldest entry

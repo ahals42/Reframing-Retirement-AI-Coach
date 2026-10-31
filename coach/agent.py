@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import dataclasses
 import re
 import logging
 from typing import Dict, Generator, List, Optional, Pattern
 
 from openai import OpenAI
 
-from coach.prompts import build_coach_prompt
+from coach.prompts import ABSTAIN_INSTRUCTION, GROUNDING_CLAUSES, NO_CONTENT_NOTE, build_coach_prompt
 from rag.retriever import RagRetriever, RetrievalResult, RetrievedChunk
 from rag.router import QueryRouter, RouteDecision
 
@@ -286,6 +287,7 @@ class CoachAgent:
         context_block = None
         self.latest_retrieval = None
         routing_instruction: Optional[str] = None
+        abstain_instruction: Optional[str] = None
         decision: Optional[RouteDecision] = None
         sources_only_followup = detect_sources_only(user_input)
         mpac_question = detect_mpac_question(user_input)
@@ -332,8 +334,14 @@ class CoachAgent:
                     prefer_science=True,
                 )
             self._last_prefer_science = decision.prefer_science
-            retrieval_result = self.retriever.gather_context(user_input, decision, science_module=science_module)
-            context_block = retrieval_result.build_prompt_context(show_labels=self.arm.cite) if retrieval_result else None
+            search_query = self._rewrite_query(user_input) if self.arm.query_rewrite else user_input
+            retrieval_result = self.retriever.gather_context(search_query, decision, science_module=science_module)
+            if self.arm.query_rewrite:
+                retrieval_result = dataclasses.replace(retrieval_result, rewritten_query=search_query)
+            context_block = retrieval_result.build_prompt_context(show_labels=self.arm.cite, char_limit=self.arm.context_char_limit) if retrieval_result else None
+            if retrieval_result is not None and getattr(retrieval_result, "no_relevant_master", False):
+                context_block = NO_CONTENT_NOTE
+                abstain_instruction = ABSTAIN_INSTRUCTION
             self.latest_retrieval = retrieval_result
             if retrieval_result and (retrieval_result.master_chunks or retrieval_result.activity_chunks or retrieval_result.home_chunks):
                 self.last_retrieval_with_results = retrieval_result
@@ -602,6 +610,8 @@ class CoachAgent:
                 )
                 override_citations = True
 
+        if abstain_instruction:
+            routing_instruction = f"{routing_instruction} {abstain_instruction}" if routing_instruction else abstain_instruction
         messages = self._build_messages(
             user_input,
             context_block if not override_citations else None,
@@ -667,14 +677,29 @@ class CoachAgent:
         messages.append({"role": "user", "content": user_input})
         return messages
 
+    def _rewrite_query(self, user_input: str) -> str:
+        """Experiment arm r2_rewrite: turn the participant's wording into a short search query (used for retrieval only)."""
+        try:
+            completion = self.client.chat.completions.create(
+                model=self.model,
+                max_completion_tokens=40,
+                temperature=0,
+                reasoning_effort="none",
+                messages=[
+                    {"role": "system", "content": (
+                        "Rewrite the participant's message as a short search query for the lessons of a physical activity program for "
+                        "retired adults. Use keywords only, no more than 20 words. Output only the query.")},
+                    {"role": "user", "content": user_input},
+                ],
+            )
+            query = (completion.choices[0].message.content or "").strip()
+        except Exception as exc:
+            logger.warning(f"Query rewrite failed, using the original wording: {exc}")
+            return user_input
+        return query or user_input
+
     def _build_retrieval_instruction(self, response_mode: str) -> str:
-        grounding_clause = (
-            "Only state specific details, mechanisms, or examples that are explicitly present in the retrieved "
-            "content below; if a detail isn't there, keep your explanation at the level of generality the content "
-            "supports rather than filling the gap from general knowledge. When the retrieved content only "
-            "partially covers the question, prefer omitting the missing part over inferring or generalizing "
-            "past what's written."
-        )
+        grounding_clause = GROUNDING_CLAUSES[self.arm.grounding_mode]
         if response_mode == "lowest_mpac":
             return (
                 "You have access to retrieved slides/activities below. Use only slide content that directly "
@@ -896,6 +921,8 @@ class CoachAgent:
         response_mode: str,
         module_reference_sentence: str,
     ) -> str:
+        if not self.arm.postprocess:
+            return self._replace_em_dash(text)
         if response_mode not in {"lowest_mpac", "emotion_education", "educational", "source_request"}:
             return self._replace_em_dash(text)
         cleaned = self._replace_em_dash(self._strip_markdown(text))
@@ -926,6 +953,8 @@ class CoachAgent:
         return content
 
     def _maybe_append_mh_disclaimer(self, text: str, user_input: str) -> str:
+        if not self.arm.postprocess:
+            return text
         if any(p.search(user_input) for p in _MH_TOPIC_PATTERNS):
             return f"{text} {_MH_DISCLAIMER}"
         return text
